@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env*
+coverage/
+*.tsbuildinfo
+test-results/
+playwright-report/
+vocab2words.pdf
+*.log
+*.png
