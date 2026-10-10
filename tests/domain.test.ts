@@ -4,18 +4,15 @@ import {
   filterHistory,
   remainingSlots,
   validateWord,
-  enrichmentSchema,
+  dictionaryEntrySchema,
+  matchesHeadword,
 } from "../src/domain/vocabulary";
+import { dictionaryEntry } from "./fixtures/dictionary";
 const entry = (day: string, word = "rescind") => ({
   id: day + word,
   day,
   word,
-  syllables: [
-    { text: "ruh", stressed: false },
-    { text: "sind", stressed: true },
-  ],
-  explanation: "To officially cancel a decision.",
-  thai: "ยกเลิกการตัดสินใจอย่างเป็นทางการ",
+  content: { kind: "dictionary" as const, entry: dictionaryEntry },
 });
 describe("Bangkok calendar and two-word policy", () => {
   it("changes day at Bangkok midnight, not UTC midnight", () => {
@@ -61,47 +58,20 @@ describe("history filters", () => {
       filterHistory(rows, { date: "2026-02-30", order: "asc" }),
     ).toThrow());
 });
-describe("AI boundary", () => {
-  const good = {
-    valid: true,
-    syllables: [
-      { text: "ruh", stressed: false },
-      { text: "sind", stressed: true },
-    ],
-    explanation: "To officially cancel a decision.",
-    thai: "ยกเลิกการตัดสินใจอย่างเป็นทางการ",
-  };
-  it("accepts readable stressed respelling and Thai explanation", () =>
-    expect(enrichmentSchema.parse(good).syllables).toHaveLength(2));
-  it("rejects IPA", () =>
+describe("dictionary domain", () => {
+  it("accepts all validated meanings and IPA", () =>
+    expect(dictionaryEntrySchema.parse(dictionaryEntry)).toEqual(
+      dictionaryEntry,
+    ));
+  it("rejects translation fields in stored data", () =>
     expect(
-      enrichmentSchema.safeParse({
-        ...good,
-        syllables: [{ text: "rɪˈsɪnd", stressed: true }],
-      }).success,
-    ).toBe(false));
-  it("rejects missing stress", () =>
-    expect(
-      enrichmentSchema.safeParse({
-        ...good,
-        syllables: [{ text: "ruh", stressed: false }],
-      }).success,
-    ).toBe(false));
-  it("rejects multiple primary stresses", () =>
-    expect(
-      enrichmentSchema.safeParse({
-        ...good,
-        syllables: [
-          { text: "ruh", stressed: true },
-          { text: "sind", stressed: true },
-        ],
-      }).success,
-    ).toBe(false));
-  it("rejects non-Thai translation", () =>
-    expect(
-      enrichmentSchema.safeParse({ ...good, thai: "cancel officially" })
+      dictionaryEntrySchema.safeParse({ ...dictionaryEntry, thai: "ignored" })
         .success,
     ).toBe(false));
+  it("accepts canonical phrases for requested words", () =>
+    expect(matchesHeadword(" Ought ", "ought  to")).toBe(true));
+  it("rejects unrelated canonical words", () =>
+    expect(matchesHeadword("ought", "bought")).toBe(false));
 });
 
 it("orders entries chronologically within the same day rather than alphabetically", () => {

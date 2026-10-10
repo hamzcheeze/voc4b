@@ -2,23 +2,22 @@ import {
   validateWord,
   DAILY_LIMIT,
   type Vocabulary,
-  type Enrichment,
+  type DictionaryEntry,
 } from "../domain/vocabulary";
 export interface VocabularyRepository {
   countToday(): Promise<number>;
-  /** Must atomically enforce user ownership, current database calendar day and cap. */
-  save(word: string, enrichment: Enrichment): Promise<Vocabulary>;
+  save(word: string, entry: DictionaryEntry): Promise<Vocabulary>;
 }
-export interface WordEnricher {
-  enrich(word: string): Promise<Enrichment>;
+export interface DictionaryProvider {
+  lookup(word: string): Promise<DictionaryEntry>;
 }
 export async function addWord(
   input: string,
-  ports: { repository: VocabularyRepository; enricher: WordEnricher },
+  ports: { repository: VocabularyRepository; dictionary: DictionaryProvider },
 ): Promise<Vocabulary> {
   const word = validateWord(input);
   if ((await ports.repository.countToday()) >= DAILY_LIMIT)
     throw new Error("วันนี้ครบสองคำแล้ว กลับมาเพิ่มคำใหม่พรุ่งนี้นะ");
-  const enriched = await ports.enricher.enrich(word);
-  return ports.repository.save(word, enriched);
+  const entry = await ports.dictionary.lookup(word);
+  return ports.repository.save(word, entry);
 }

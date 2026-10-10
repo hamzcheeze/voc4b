@@ -27,8 +27,24 @@ function sql(query) {
 let result = await sql(`insert into auth.users(id) values('${uid}');`);
 assert.equal(result.code, 0, result.err);
 const prefix = `set role authenticated;select set_config('request.jwt.claim.sub','${uid}',false);`;
-const call = (word) =>
-  `${prefix}select word from public.save_vocabulary('${word}','[{"text":"word","stressed":true}]','A simple example.','ตัวอย่างที่เข้าใจง่าย');`;
+const call = (word) => {
+  const entry = {
+    headword: word,
+    partsOfSpeech: ["noun"],
+    pronunciations: [],
+    definitions: [
+      {
+        id: "0",
+        pos: "noun",
+        source: "test",
+        text: "A simple English example.",
+        examples: [],
+      },
+    ],
+    verbForms: [],
+  };
+  return `${prefix}select word from public.save_vocabulary('${word}','${JSON.stringify(entry)}'::jsonb);`;
+};
 const results = await Promise.all(
   ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta"].map(
     (word) => sql(call(word)),

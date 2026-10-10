@@ -1,59 +1,63 @@
+import { z } from "zod";
 import {
   dayKey,
   validateWord,
+  vocabularySchema,
   type Vocabulary,
-  type Enrichment,
+  type DictionaryEntry,
 } from "../domain/vocabulary";
-const KEY = "two-words-demo-v1";
-const examples: Record<string, Enrichment> = {
-  rescind: {
-    syllables: [
-      { text: "ruh", stressed: false },
-      { text: "sind", stressed: true },
-    ],
-    explanation: "To officially cancel a decision, rule, or agreement.",
-    thai: "ยกเลิกการตัดสินใจ กฎ หรือข้อตกลงอย่างเป็นทางการ",
-  },
-  serene: {
-    syllables: [
-      { text: "suh", stressed: false },
-      { text: "reen", stressed: true },
-    ],
-    explanation: "Calm and peaceful, without worry or noise.",
-    thai: "สงบและผ่อนคลาย ไม่มีความกังวลหรือเสียงรบกวน",
-  },
-  thrive: {
-    syllables: [{ text: "thryv", stressed: true }],
-    explanation: "To grow well or become successful.",
-    thai: "เติบโตได้ดีหรือประสบความสำเร็จ",
-  },
-  deliberate: {
-    syllables: [
-      { text: "dih", stressed: false },
-      { text: "lib", stressed: true },
-      { text: "er", stressed: false },
-      { text: "ut", stressed: false },
-    ],
-    explanation: "Done carefully and on purpose, rather than by accident.",
-    thai: "ทำอย่างรอบคอบและตั้งใจ ไม่ได้เกิดขึ้นโดยบังเอิญ",
-  },
-  subtle: {
-    syllables: [
-      { text: "sut", stressed: true },
-      { text: "ul", stressed: false },
-    ],
-    explanation: "Not obvious or easy to notice.",
-    thai: "ไม่ชัดเจนหรือสังเกตเห็นได้ยาก",
-  },
-  resilient: {
-    syllables: [
-      { text: "rih", stressed: false },
-      { text: "zil", stressed: true },
-      { text: "yunt", stressed: false },
-    ],
-    explanation: "Able to recover after something difficult happens.",
-    thai: "สามารถฟื้นตัวได้หลังเผชิญเรื่องยากลำบาก",
-  },
+const KEY = "two-words-demo-v2";
+function sample(
+  word: string,
+  pos: string,
+  ipa: string,
+  text: string,
+): DictionaryEntry {
+  return {
+    headword: word,
+    partsOfSpeech: [pos],
+    pronunciations: [{ pos, region: "us", ipa, audioUrl: "" }],
+    definitions: [{ id: "0", pos, source: "demo", text, examples: [] }],
+    verbForms: [],
+  };
+}
+const examples: Record<string, DictionaryEntry> = {
+  rescind: sample(
+    "rescind",
+    "verb",
+    "/rɪˈsɪnd/",
+    "To officially cancel a decision, rule, or agreement.",
+  ),
+  serene: sample(
+    "serene",
+    "adjective",
+    "/səˈriːn/",
+    "Calm and peaceful, without worry or noise.",
+  ),
+  thrive: sample(
+    "thrive",
+    "verb",
+    "/θraɪv/",
+    "To grow well or become successful.",
+  ),
+  deliberate: sample(
+    "deliberate",
+    "adjective",
+    "/dɪˈlɪb.ɚ.ət/",
+    "Done carefully and on purpose, rather than by accident.",
+  ),
+  subtle: sample(
+    "subtle",
+    "adjective",
+    "/ˈsʌt̬.əl/",
+    "Not obvious or easy to notice.",
+  ),
+  resilient: sample(
+    "resilient",
+    "adjective",
+    "/rɪˈzɪl.jənt/",
+    "Able to recover after something difficult happens.",
+  ),
 };
 function samples(): Vocabulary[] {
   const today = dayKey();
@@ -67,14 +71,14 @@ function samples(): Vocabulary[] {
     id: `sample-${word}`,
     day: i < 2 ? yesterday : older,
     word,
-    ...examples[word],
+    content: { kind: "dictionary", entry: examples[word] },
   }));
 }
 function list(): Vocabulary[] {
   const saved = localStorage.getItem(KEY);
   if (!saved) return samples();
   try {
-    return JSON.parse(saved) as Vocabulary[];
+    return z.array(vocabularySchema).parse(JSON.parse(saved));
   } catch {
     throw new Error("ข้อมูลเดโมในเบราว์เซอร์เสียหาย กดล้างเดโมเพื่อเริ่มใหม่");
   }
@@ -90,24 +94,24 @@ function save(word: string): Vocabulary {
     )
   )
     throw new Error("วันนี้มีคำนี้แล้ว");
-  const example = examples[word.toLowerCase()];
-  if (!example)
+  const entry = examples[word.toLowerCase()];
+  if (!entry)
     throw new Error(
-      "เดโมมีเฉพาะ rescind, serene, thrive, deliberate, subtle และ resilient (ไม่ได้เรียก AI จริง)",
+      "เดโมมีเฉพาะ rescind, serene, thrive, deliberate, subtle และ resilient",
     );
-  const entry = {
+  const vocabulary: Vocabulary = {
     id: crypto.randomUUID(),
     created_at: new Date().toISOString(),
     day: today,
     word,
-    ...example,
+    content: { kind: "dictionary", entry },
   };
   try {
-    localStorage.setItem(KEY, JSON.stringify([...rows, entry]));
+    localStorage.setItem(KEY, JSON.stringify([...rows, vocabulary]));
   } catch {
     throw new Error("เบราว์เซอร์ไม่อนุญาตให้บันทึกเดโม");
   }
-  return entry;
+  return vocabulary;
 }
 export const demoStore = {
   list,

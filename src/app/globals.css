@@ -277,13 +277,24 @@ h1 {
   color: var(--muted);
   line-height: 1.6;
 }
-.pronunciation .stressed {
-  font-weight: 700;
-  color: var(--ink);
+.pronunciation-play {
+  width: 30px;
+  height: 30px;
 }
-.syllable-dot {
+.canonical-headword,
+.legacy-pronunciation {
+  margin: 8px 0 12px;
   color: var(--muted);
-  padding: 0 2px;
+  font-size: 14px;
+}
+.legacy-label {
+  margin-left: 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.audio-error {
+  color: var(--muted);
+  font-size: 11px;
 }
 .pronunciation-origin {
   font-size: 10px;
@@ -300,11 +311,57 @@ h1 {
   margin: 0;
   font-weight: 400;
 }
-.meaning .thai {
-  font-size: 14px;
-  margin-top: 6px;
-  line-height: 1.85;
+.meaning .part-of-speech {
   color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.definition + .definition {
+  margin-top: 24px;
+}
+.examples {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.examples li + li {
+  margin-top: 6px;
+}
+.dictionary-details {
+  margin-top: 18px;
+}
+.dictionary-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dictionary-details[open] summary {
+  margin-bottom: 16px;
+}
+.dictionary-source {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 18px;
+}
+a.dictionary-source:hover {
+  text-decoration: underline;
+}
+.verb-forms dl {
+  font-size: 13px;
+  margin: 0;
+}
+.verb-forms dl div {
+  display: flex;
+  gap: 20px;
+}
+.verb-forms dt {
+  color: var(--muted);
+  min-width: 160px;
+}
+.verb-forms dd {
+  margin: 0;
 }
 .add-card {
   width: 100%;
@@ -612,9 +669,6 @@ dialog input {
   }
   .meaning p {
     font-size: 15px;
-  }
-  .meaning .thai {
-    font-size: 13px;
   }
   .add-card {
     min-height: 54px;

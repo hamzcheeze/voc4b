@@ -102,7 +102,7 @@ export default function TodayPage() {
             autoFocus
             autoComplete="off"
             spellCheck={false}
-            placeholder="rescind"
+            placeholder=""
             value={word}
             onChange={(e) => setWord(e.target.value)}
             maxLength={80}
@@ -118,7 +118,7 @@ export default function TodayPage() {
             </div>
           )}
           <button className="primary" disabled={busy || !word.trim()}>
-            {busy ? "กำลังสร้าง…" : "บันทึก"}
+            {busy ? "กำลังบันทึก…" : "บันทึก"}
             {!busy && <Icon name="arrow" />}
           </button>
         </form>

@@ -4,6 +4,12 @@ const paths = {
   check: <path d="m5 12 4 4L19 6" />,
   arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
   close: <path d="m6 6 12 12M6 18 18 6" />,
+  volume: (
+    <>
+      <path d="m11 5-6 4H2v6h3l6 4V5Z" />
+      <path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+    </>
+  ),
   moon: <path d="M20.9 13.1A9 9 0 0 1 10.9 3.1a9 9 0 1 0 10 10Z" />,
   sun: (
     <>

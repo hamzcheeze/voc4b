@@ -121,7 +121,7 @@ export function Workspace({
     const timer = setInterval(check, 15000);
     window.addEventListener("focus", check);
     const storage = (event: StorageEvent) => {
-      if (mode === "demo" && event.key === "two-words-demo-v1") void refresh();
+      if (mode === "demo" && event.key === "two-words-demo-v2") void refresh();
     };
     window.addEventListener("storage", storage);
     return () => {
@@ -182,7 +182,7 @@ export function Workspace({
                 <summary title="ข้อมูลตัวอย่าง">เดโม</summary>
                 <div className="mode-popover">
                   <p>คำตัวอย่าง · เก็บในเครื่อง</p>
-                  <p>ไม่ได้เรียก AI หรือ Supabase</p>
+                  <p>ไม่ได้เรียก Dictionary API หรือ Supabase</p>
                   <button
                     className="text-button"
                     onClick={() => {
@@ -213,7 +213,7 @@ export function Workspace({
           {mode === "unconfigured" ? (
             <section className="setup-panel">
               <h1>ตั้งค่าการเชื่อมต่อ</h1>
-              <p>กรอก Supabase และ Groq keys ตาม README เพื่อเริ่มใช้งาน</p>
+              <p>กรอก Supabase keys ตาม README เพื่อเริ่มใช้งาน</p>
             </section>
           ) : !authReady ? (
             <p role="status" className="loading">

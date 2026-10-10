@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { appMode } from "../../../application/config";
 import { addWord } from "../../../application/add-word";
-import { GroqEnricher } from "../../../adapters/groq";
+import { CambridgeDictionary } from "../../../adapters/dictionary";
 import { SupabaseRepository, userClient } from "../../../adapters/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store" };
 async function repository(request: NextRequest) {
   if (appMode(process.env) !== "live")
-    throw new ApiError("ยังไม่ได้ตั้งค่า Supabase และ AI สำหรับระบบจริง", 503);
+    throw new ApiError("ยังไม่ได้ตั้งค่า Supabase สำหรับระบบจริง", 503);
   const token = request.headers
     .get("authorization")
     ?.match(/^Bearer (.+)$/)?.[1];
@@ -79,10 +79,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError("กรุณากรอกคำศัพท์", 400);
     const entry = await addWord(body.word, {
       repository: repo,
-      enricher: new GroqEnricher(
-        process.env.GROQ_API_KEY!,
-        process.env.GROQ_MODEL || "openai/gpt-oss-20b",
-      ),
+      dictionary: new CambridgeDictionary(),
     });
     return NextResponse.json({ entry }, { status: 201, headers });
   } catch (error) {

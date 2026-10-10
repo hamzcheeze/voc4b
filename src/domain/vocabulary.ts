@@ -30,38 +30,104 @@ export const syllableSchema = z
     stressed: z.boolean(),
   })
   .strict();
-export const enrichmentSchema = z
+export const audioUrlSchema = z
+  .string()
+  .max(2048)
+  .refine((value) => {
+    if (!value) return true;
+    try {
+      const url = new URL(value);
+      return (
+        url.protocol === "https:" &&
+        url.hostname === "dictionary.cambridge.org" &&
+        !url.username &&
+        !url.password &&
+        !url.port
+      );
+    } catch {
+      return false;
+    }
+  }, "Audio must come from Cambridge over HTTPS");
+const englishTextSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(4000)
+  .regex(/[a-zA-Z]/);
+const idSchema = z.string().min(1).max(128);
+export const dictionaryEntrySchema = z
   .object({
-    valid: z.literal(true),
-    syllables: z
-      .array(syllableSchema)
+    headword: z.string().trim().min(1).max(160),
+    partsOfSpeech: z.array(z.string().trim().max(128)).max(100),
+    pronunciations: z
+      .array(
+        z
+          .object({
+            pos: z.string().trim().max(128),
+            region: z.enum(["us", "uk"]),
+            ipa: z.string().trim().min(1).max(256),
+            audioUrl: audioUrlSchema,
+          })
+          .strict(),
+      )
+      .max(1000),
+    definitions: z
+      .array(
+        z
+          .object({
+            id: idSchema,
+            pos: z.string().trim().max(128),
+            source: z.string().trim().max(256),
+            text: englishTextSchema,
+            examples: z
+              .array(
+                z.object({ id: idSchema, text: englishTextSchema }).strict(),
+              )
+              .max(1000),
+          })
+          .strict(),
+      )
       .min(1)
-      .max(12)
-      .refine(
-        (s) => s.filter((x) => x.stressed).length === 1,
-        "Exactly one primary stress is required",
-      ),
-    explanation: z
-      .string()
-      .trim()
-      .min(3)
-      .max(400)
-      .regex(/[a-zA-Z]/)
-      .refine((s) => !/[\u0E00-\u0E7F]/.test(s)),
-    thai: z
-      .string()
-      .trim()
-      .min(3)
-      .max(600)
-      .regex(/[\u0E00-\u0E7F]/),
+      .max(1000),
+    verbForms: z
+      .array(
+        z
+          .object({
+            id: idSchema,
+            type: z.string().trim().min(1).max(128),
+            text: z.string().trim().min(1).max(4000),
+          })
+          .strict(),
+      )
+      .max(1000),
   })
   .strict();
-export type Enrichment = Omit<z.infer<typeof enrichmentSchema>, "valid">;
-export interface Vocabulary extends Enrichment {
-  created_at?: string;
-  id: string;
-  word: string;
-  day: string;
+export type DictionaryEntry = z.infer<typeof dictionaryEntrySchema>;
+export const vocabularySchema = z.object({
+  id: z.string().min(1),
+  word: z.string().min(1).max(80),
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  created_at: z.string().optional(),
+  content: z.discriminatedUnion("kind", [
+    z
+      .object({ kind: z.literal("dictionary"), entry: dictionaryEntrySchema })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("legacy"),
+        explanation: z.string(),
+        syllables: z.array(syllableSchema),
+      })
+      .strict(),
+  ]),
+});
+export type Vocabulary = z.infer<typeof vocabularySchema>;
+export function matchesHeadword(word: string, headword: string): boolean {
+  const normalize = (value: string) =>
+    value.trim().toLowerCase().replace(/\s+/g, " ");
+  const requested = normalize(word),
+    canonical = normalize(headword);
+  return canonical === requested || canonical.startsWith(`${requested} `);
 }
 export type HistoryFilters = {
   date?: string;

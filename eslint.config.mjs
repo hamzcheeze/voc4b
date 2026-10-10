@@ -5,6 +5,7 @@ import hooks from "eslint-plugin-react-hooks";
 export default defineConfig([
   globalIgnores([
     ".next/**",
+    "cambridge-dictionary-api/**",
     "coverage/**",
     "next-env.d.ts",
     "test-results/**",

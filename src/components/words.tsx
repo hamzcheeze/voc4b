@@ -1,43 +1,181 @@
-import React from "react";
-import { remainingSlots, type Vocabulary } from "../domain/vocabulary";
+"use client";
+import React, { useRef, useState } from "react";
+import {
+  remainingSlots,
+  type Vocabulary,
+  type DictionaryEntry,
+} from "../domain/vocabulary";
 import { Icon } from "./icon";
 export function WordCard({ entry }: { entry: Vocabulary; index?: number }) {
+  const content = entry.content;
+  if (content.kind === "legacy")
+    return (
+      <article className="word-card">
+        <div className="word-heading">
+          <h2 lang="en">{entry.word}</h2>
+          <span className="legacy-label">ข้อมูลเดิม</span>
+        </div>
+        <p className="legacy-pronunciation" lang="en">
+          {content.syllables.map((s) => s.text).join(" · ")}
+        </p>
+        <div className="meaning">
+          <p lang="en">{content.explanation}</p>
+        </div>
+      </article>
+    );
+  const dictionary = content.entry;
+  const pronunciations = dictionary.pronunciations.filter(
+    (p, i, rows) =>
+      rows.findIndex(
+        (row) =>
+          row.region === p.region &&
+          row.ipa === p.ipa &&
+          row.audioUrl === p.audioUrl,
+      ) === i,
+  );
+  const preferred =
+    pronunciations.find((p) => p.region === "us") ||
+    pronunciations.find((p) => p.region === "uk") ||
+    pronunciations[0];
   return (
     <article className="word-card">
       <div className="word-heading">
         <h2 lang="en">{entry.word}</h2>
       </div>
-      <div
-        className="pronunciation"
-        lang="en"
-        aria-label="American pronunciation"
+      {dictionary.headword.toLowerCase() !== entry.word.toLowerCase() && (
+        <p className="canonical-headword" lang="en">
+          {dictionary.headword}
+        </p>
+      )}
+      {preferred && (
+        <Pronunciation word={entry.word} pronunciation={preferred} />
+      )}
+      <div className="meaning" lang="en">
+        {dictionary.definitions.slice(0, 1).map((definition) => (
+          <Sense key={definition.id} definition={definition} />
+        ))}
+        {dictionary.definitions.length > 1 && (
+          <details className="dictionary-details">
+            <summary>อีก {dictionary.definitions.length - 1} ความหมาย</summary>
+            {dictionary.definitions.slice(1).map((definition) => (
+              <Sense key={definition.id} definition={definition} />
+            ))}
+          </details>
+        )}
+      </div>
+      {pronunciations.length > 1 && (
+        <details className="dictionary-details">
+          <summary>การออกเสียงเพิ่มเติม</summary>
+          {pronunciations
+            .filter((p) => p !== preferred)
+            .map((p, i) => (
+              <Pronunciation key={i} word={entry.word} pronunciation={p} />
+            ))}
+        </details>
+      )}
+      {dictionary.verbForms.length > 0 && (
+        <details className="dictionary-details verb-forms">
+          <summary>รูปคำกริยา</summary>
+          <dl lang="en">
+            {dictionary.verbForms.map((form) => (
+              <div key={form.id}>
+                <dt>{form.type}</dt>
+                <dd>{form.text}</dd>
+              </div>
+            ))}
+          </dl>
+          <span className="dictionary-source">Simple Wiktionary</span>
+        </details>
+      )}
+      <a
+        className="dictionary-source"
+        href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase())}`}
+        target="_blank"
+        rel="noreferrer"
       >
-        <p>
-          {entry.syllables.map((s, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && (
-                <span className="syllable-dot" aria-hidden="true">
-                  {" "}
-                  ·{" "}
-                </span>
-              )}
-              {s.stressed ? (
-                <strong className="stressed">{s.text}</strong>
-              ) : (
-                <span>{s.text}</span>
-              )}
-            </React.Fragment>
-          ))}
-        </p>
-        <span className="pronunciation-origin">US</span>
-      </div>
-      <div className="meaning">
-        <p lang="en">{entry.explanation}</p>
-        <p lang="th" className="thai">
-          {entry.thai}
-        </p>
-      </div>
+        Cambridge Dictionary
+      </a>
     </article>
+  );
+}
+function Sense({
+  definition,
+}: {
+  definition: DictionaryEntry["definitions"][number];
+}) {
+  return (
+    <section className="definition">
+      {definition.pos && <p className="part-of-speech">{definition.pos}</p>}
+      <p>{definition.text}</p>
+      {definition.examples.length > 0 && (
+        <ul className="examples">
+          {definition.examples.map((example) => (
+            <li key={example.id}>{example.text}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+function Pronunciation({
+  word,
+  pronunciation,
+}: {
+  word: string;
+  pronunciation: DictionaryEntry["pronunciations"][number];
+}) {
+  const audio = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false),
+    [error, setError] = useState(false);
+  async function toggle() {
+    if (!audio.current) return;
+    if (playing) {
+      audio.current.pause();
+      setPlaying(false);
+      return;
+    }
+    setError(false);
+    try {
+      await audio.current.play();
+      setPlaying(true);
+    } catch {
+      setError(true);
+    }
+  }
+  return (
+    <div className="pronunciation" lang="en">
+      <p>{pronunciation.ipa}</p>
+      <span className="pronunciation-origin">
+        {pronunciation.region.toUpperCase()}
+      </span>
+      {pronunciation.audioUrl && (
+        <>
+          <button
+            className="icon-button pronunciation-play"
+            onClick={() => void toggle()}
+            aria-label={`${playing ? "หยุด" : "ฟัง"}เสียง ${word} ${pronunciation.region.toUpperCase()}`}
+            aria-pressed={playing}
+          >
+            <Icon name="volume" />
+          </button>
+          <audio
+            ref={audio}
+            src={pronunciation.audioUrl}
+            preload="none"
+            onEnded={() => setPlaying(false)}
+            onError={() => {
+              setPlaying(false);
+              setError(true);
+            }}
+          />
+        </>
+      )}
+      {error && (
+        <span role="alert" className="audio-error" lang="th">
+          เล่นเสียงไม่สำเร็จ
+        </span>
+      )}
+    </div>
   );
 }
 export function TodayWords({

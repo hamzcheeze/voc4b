@@ -53,7 +53,9 @@ test("zero → one → two, persistence, history and demo reset", async ({
     await page.locator(".history-day-heading h2").allTextContents(),
   ).toEqual([...ascending].reverse());
   await page.getByText("เดโม", { exact: true }).click();
-  await expect(page.getByText("ไม่ได้เรียก AI หรือ Supabase")).toBeVisible();
+  await expect(
+    page.getByText("ไม่ได้เรียก Dictionary API หรือ Supabase"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "ล้างเดโม" }).click();
   await page.getByRole("link", { name: /วันนี้/ }).click();
   await expect(page.getByRole("button", { name: /เพิ่มคำศัพท์/ })).toHaveCount(
@@ -77,21 +79,16 @@ test("transparent unsupported word, focus, no slot consumption", async ({
   ).toBeFocused();
   await expect(page.getByText("0 / 2 คำ")).toBeVisible();
 });
-test("accessible desktop/mobile, stress has stronger weight and color", async ({
+test("accessible desktop/mobile, IPA is visible without horizontal overflow", async ({
   page,
 }, testInfo) => {
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: /เพิ่มคำศัพท์/ }).click();
   await page.getByLabel("คำศัพท์", { exact: true }).fill("rescind");
   await page.getByRole("button", { name: "บันทึก" }).click();
-  await expect(page.locator("strong.stressed")).toHaveText("sind");
-  const colors = await page.locator(".pronunciation p").evaluate((el) => ({
-    normal: getComputedStyle(el.querySelector("span")!).color,
-    strong: getComputedStyle(el.querySelector("strong")!).color,
-    weight: getComputedStyle(el.querySelector("strong")!).fontWeight,
-  }));
-  expect(colors.strong).not.toEqual(colors.normal);
-  expect(Number(colors.weight)).toBeGreaterThanOrEqual(700);
+  await expect(page.locator(".pronunciation p")).toHaveText("/rɪˈsɪnd/");
+  await expect(page.locator(".part-of-speech")).toHaveText("verb");
+  await expect(page.locator(".meaning .thai")).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -118,9 +115,9 @@ test("dark mode persists through navigation and reload, with readable monochrome
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByLabel("คำศัพท์", { exact: true }).fill("rescind");
   await page.getByRole("button", { name: "บันทึก" }).click();
-  await expect(page.locator("strong.stressed")).toHaveText("sind");
+  await expect(page.locator(".pronunciation p")).toHaveText("/rɪˈsɪnd/");
   const palette = await page
-    .locator("body,.stressed,.meaning .thai,.pronunciation p,.brand")
+    .locator("body,.part-of-speech,.meaning p,.pronunciation p,.brand")
     .evaluateAll((nodes) => nodes.map((el) => getComputedStyle(el).color));
   for (const color of palette) {
     const [r, g, b] = color.match(/\d+/g)!.map(Number);
