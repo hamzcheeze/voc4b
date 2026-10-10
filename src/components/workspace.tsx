@@ -160,9 +160,9 @@ export function Workspace({
     >
       <div className="app-shell">
         <header className="masthead">
-          <Link href="/" className="brand" aria-label="two words · หน้าหลัก">
+          <Link href="/" className="brand" aria-label="voc4b · หน้าหลัก">
             <Icon name="notebook" />
-            <span>two words</span>
+            <span>voc4b</span>
           </Link>
           <nav aria-label="เมนูหลัก">
             <Link href="/" aria-current={path === "/" ? "page" : undefined}>

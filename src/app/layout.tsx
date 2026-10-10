@@ -6,7 +6,7 @@ import { THEME_BOOTSTRAP } from "../components/theme-script";
 import "@fontsource-variable/noto-sans-thai";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "two words — สมุดคำศัพท์วันละสองคำ",
+  title: "voc4b",
   description:
     "เรียนรู้คำศัพท์ภาษาอังกฤษวันละสองคำ พร้อมคำอ่านและคำอธิบายที่เข้าใจง่าย",
 };

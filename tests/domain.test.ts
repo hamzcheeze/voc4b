@@ -32,7 +32,7 @@ describe("Bangkok calendar and two-word policy", () => {
   );
   it("accepts a single English word and trims it", () =>
     expect(validateWord(" Rescind ")).toBe("Rescind"));
-  it.each(["", "two words", "<script>", "123", "a".repeat(81)])(
+  it.each(["", "voc4b", "<script>", "123", "a".repeat(81)])(
     "rejects invalid input %s",
     (word) => expect(() => validateWord(word)).toThrow(),
   );
