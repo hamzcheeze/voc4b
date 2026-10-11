@@ -9,7 +9,7 @@ npm run lint
 npm run build
 ```
 
-`dictionary.test.ts` checks the response-to-domain mapping against literal expected data. It covers all nonblank senses and their examples, blank derived-word definitions, pronunciation variants, verb forms, translation removal, unrelated headwords, unsafe audio URLs, HTTP failures, and malformed JSON.
+`dictionary.test.ts` serves local HTML fixtures through a mocked fetch and checks the resulting entry against literal expected data. It covers nonblank senses and their examples, blank derived-word definitions, pronunciation variants, verb forms, translation omission, unrelated headwords, unsafe audio URLs, and upstream failures. The fixtures test the Next.js parser without running the reference clone.
 
 `add-word.test.ts` checks lookup before save, the early daily cap, and no save after a provider failure. UI tests check US pronunciation, UK fallback, audio controls, additional senses, and honest legacy display.
 
@@ -26,9 +26,9 @@ TEST_DATABASE_URL="$TEST_DATABASE_URL" node scripts/test-concurrency.mjs
 
 Eight simultaneous connections must produce two saved entries and six `daily_limit` errors.
 
-## Read the real Dictionary API
+## Read the real dictionary pages
 
-Start the Dictionary API on port 3001. The optional live test only reads the provider and never saves vocabulary.
+The optional live test fetches Cambridge and Simple Wiktionary through `CambridgeDictionary`. It never saves vocabulary and needs no local dictionary service.
 
 ```sh
 RUN_LIVE_CHECK=1 npx vitest run tests/live-connection.test.ts
@@ -36,13 +36,15 @@ RUN_LIVE_CHECK=1 npx vitest run tests/live-connection.test.ts
 
 ## Verify real Supabase writes
 
-Run the live app and Dictionary API, apply migration 002, and set `SUPABASE_SECRET_KEY` in `.env.local`.
+Run the live Next.js app, apply migration 002, and set `SUPABASE_SECRET_KEY` in `.env.local`.
 
 ```sh
 RUN_LIVE_WRITE_CHECK=1 npx vitest run tests/live-save.test.ts
 ```
 
-This opt-in check creates two confirmed temporary accounts without sending email. It signs in with the public key, adds words through the local app API, compares Supabase data with the Dictionary API, and checks user isolation and the daily cap. Cleanup deletes only the accounts created by this run and their vocabulary. It does not sign in as an existing user. Set `LIVE_APP_URL` if the local app uses a different port.
+This opt-in check creates two confirmed temporary accounts without sending email. It signs in with the public key, adds words through `POST /api/words`, compares Supabase data with `CambridgeDictionary.lookup()`, and checks user isolation and the daily cap. Cleanup deletes only the accounts created by this run and their vocabulary. It does not sign in as an existing user. Set `LIVE_APP_URL` if the local app uses a different port.
+
+For deployment acceptance, build a copy of the Next.js app without the nested `cambridge-dictionary-api` folder. Start that build and run the live write check against its `LIVE_APP_URL`. A successful check proves that the app fetches dictionary data and saves it without the reference clone or its server.
 
 ## Check the browser
 

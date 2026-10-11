@@ -1,17 +1,17 @@
 # voc4b
 
-สมุดคำศัพท์ภาษาอังกฤษวันละสองคำ ใช้ข้อมูลจาก Dictionary API ที่ดึงหน้า Cambridge Dictionary แล้วเก็บความหมาย ตัวอย่าง IPA เสียง และรูปคำกริยาลง Supabase โดยไม่มีคำแปลไทย
+สมุดคำศัพท์ภาษาอังกฤษวันละสองคำ Next.js ดึงความหมาย ตัวอย่าง IPA และเสียงจากหน้า Cambridge Dictionary แล้วเก็บลง Supabase รูปคำกริยามาจาก Simple Wiktionary โดยไม่มีคำแปลไทย
 
 ## เริ่มในเครื่อง
 
 ใช้ Node.js 22.19 ขึ้นไป แล้วรันคำสั่งในโฟลเดอร์โปรเจกต์
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-เปิด http://localhost:3000 หากยังไม่มี Supabase keys แอปใช้เดโมที่เก็บคำตัวอย่างในเบราว์เซอร์ ทดลอง `rescind` และ `serene` ได้ เดโมไม่เรียก Dictionary API หรือ Supabase
+เปิด http://localhost:3000 หากยังไม่มี Supabase keys แอปใช้เดโมที่เก็บคำตัวอย่างในเบราว์เซอร์ ทดลอง `rescind` และ `serene` ได้ เดโมไม่เรียกพจนานุกรมหรือ Supabase
 
 ## เชื่อมข้อมูลจริง
 
@@ -24,15 +24,14 @@ npm run dev
 APP_MODE=live
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-DICTIONARY_API_URL=http://127.0.0.1:3001
 NEXT_PUBLIC_ALLOW_SIGNUP=false
 ```
 
-ใช้ `NEXT_PUBLIC_SUPABASE_ANON_KEY` แทน publishable key ได้ ไม่ต้องตั้งค่า Groq แล้ว `DICTIONARY_API_URL` เป็น URL ฝั่งเซิร์ฟเวอร์ ห้ามเติม `NEXT_PUBLIC_` ให้ตัวแปรนี้
+ใช้ `NEXT_PUBLIC_SUPABASE_ANON_KEY` แทน publishable key ได้
 
-ให้เซิร์ฟเวอร์จาก `cambridge-dictionary-api` ทำงานบนพอร์ต 3001 เปิด `/api/dictionary/en/ought` เพื่อยืนยันว่าได้ JSON ก่อนเพิ่มคำในแอป โปรเจกต์พจนานุกรมมี dependencies และขั้นตอนรันใน README ของตัวเอง
+คำที่เพิ่มต้องเป็นภาษาอังกฤษหนึ่งคำ `POST /api/words` ตรวจเซสชันของผู้ใช้ แล้วดึงหน้าเว็บพจนานุกรมผ่าน `CambridgeDictionary` ฝั่งเซิร์ฟเวอร์ Next.js ใช้ Cheerio อ่าน HTML และตรวจข้อมูลก่อนบันทึก
 
-คำที่เพิ่มต้องเป็นภาษาอังกฤษหนึ่งคำ เซิร์ฟเวอร์เรียก `GET /api/dictionary/en/{word}` แล้วตรวจสอบข้อมูลก่อนบันทึก HTTP error คำที่ไม่พบ ผลลัพธ์ผิดรูปแบบ หรือคำที่ redirect ไปคนละคำจะไม่ใช้ช่องคำศัพท์ของวันนั้น
+HTTP error คำที่ไม่พบ ผลลัพธ์ผิดรูปแบบ หรือคำที่ redirect ไปคนละคำจะไม่ใช้ช่องคำศัพท์ของวันนั้น หาก Simple Wiktionary ไม่พร้อมใช้งาน แอปยังบันทึกความหมายจาก Cambridge ได้โดยไม่มีรูปคำกริยา
 
 หาก scraper ส่งรายการที่ข้อความความหมายว่างมาด้วย แอปจะข้ามรายการนั้น โดยเก็บความหมายและตัวอย่างของรายการที่มีข้อความครบ ถ้าไม่เหลือความหมาย แอปจะไม่บันทึกคำ
 
@@ -48,7 +47,15 @@ SUPABASE_USER_ACCESS_TOKEN=your-user-access-token node scripts/clear-today.mjs -
 
 ## ใช้งานบนเซิร์ฟเวอร์
 
-ตั้ง `DICTIONARY_API_URL` เป็น URL ของ Dictionary API ที่เซิร์ฟเวอร์ Next.js ติดต่อได้ URL localhost ใช้ได้เมื่อทั้งสองโปรเจกต์รันในเครื่องเดียวกันเท่านั้น ตั้ง Supabase Site URL ให้ตรงกับ URL ของแอป แล้วรัน `npm run build` และ `npm start`
+ตั้งค่าตัวแปร Supabase ด้านบน และตั้ง Supabase Site URL ให้ตรงกับ URL ของแอป ใช้เซิร์ฟเวอร์ Node.js ที่ติดต่อ `dictionary.cambridge.org`, `simple.wiktionary.org` และ Supabase ได้ แล้วรัน
+
+```sh
+npm ci
+npm run build
+npm start
+```
+
+โปรเจกต์ Next.js มี logic ดึงพจนานุกรมใน `src/adapters/dictionary.ts` แล้ว สามารถลบโฟลเดอร์ `cambridge-dictionary-api` ก่อน deploy ได้ แอปไม่ต้องเปิดเซิร์ฟเวอร์พจนานุกรมแยก ดูแหล่งที่มาและใบอนุญาตใน [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## ตรวจสอบโค้ด
 

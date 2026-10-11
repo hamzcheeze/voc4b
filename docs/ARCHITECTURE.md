@@ -2,7 +2,15 @@
 
 `Workspace.add()` sends the requested word to authenticated `POST /api/words`. The route verifies the Supabase session and calls `addWord()`. The use case validates the word, checks today's count, calls `DictionaryProvider.lookup()`, and saves the entry with `VocabularyRepository.save(word, entry)`.
 
-`CambridgeDictionary` calls the configured Dictionary API. The API supplies English meanings and pronunciation from Cambridge pages. Its verb forms come from Simple Wiktionary. The adapter treats JSON as `unknown`, validates the wire response with Zod, and normalizes the field names. It removes definition and example translations. It preserves every definition, example, source, IPA, audio URL, and verb form.
+`POST /api/words` is the backend for the vocabulary UI. It calls `CambridgeDictionary` directly inside the Next.js Node server. The server does not call a separate dictionary service or an HTTP route in the same app.
+
+`CambridgeDictionary` fetches `https://dictionary.cambridge.org/us/dictionary/english/{word}` and `https://simple.wiktionary.org/wiki/{word}`. Cheerio reads Cambridge's headword, parts of speech, pronunciation blocks, definition blocks, and examples. It reads verb forms from Simple Wiktionary's inflection table. The adapter validates the extracted object with `dictionaryEntrySchema` before returning it. It skips blank definitions and does not extract translations. A failed Wiktionary lookup yields an empty `verbForms` array without discarding Cambridge data.
+
+Each upstream request has a 10-second timeout through the response body and a 2 MiB HTML limit. The fetch follows at most five redirects within the original HTTPS origin. The upstream origins are fixed in server-only code. A missing or unrelated headword, invalid entry, or failed Cambridge request prevents a save.
+
+The route owns one `CambridgeDictionary` instance. It caches successful entries for 30 minutes and keeps at most 1,000 entries in memory. Failed lookups are not cached. The cache belongs to a warm Next.js server instance, so a restart or another instance starts with an empty cache. Upstream fetches use `cache: "no-store"` so an invalid HTML response cannot enter Next.js's fetch cache.
+
+The extraction logic comes from `chenelias/cambridge-dictionary-api`. The app owns its dependencies and copy of that logic in `src/adapters/dictionary.ts`, with attribution in [Third-party notices](../THIRD_PARTY_NOTICES.md). The nested clone is a reference copy and can be deleted before deployment.
 
 The requested word remains `Vocabulary.word`. A canonical phrase such as `ought to` remains `content.entry.headword`. The adapter accepts the requested headword or a phrase that begins with that word followed by a space. It rejects unrelated redirect results.
 

@@ -6,6 +6,7 @@ import { SupabaseRepository, userClient } from "../../../adapters/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store" };
+const dictionary = new CambridgeDictionary();
 async function repository(request: NextRequest) {
   if (appMode(process.env) !== "live")
     throw new ApiError("ยังไม่ได้ตั้งค่า Supabase สำหรับระบบจริง", 503);
@@ -53,7 +54,6 @@ export async function GET(request: NextRequest) {
 }
 export async function POST(request: NextRequest) {
   try {
-    // Bearer auth is not ambient browser cookie auth; cross-origin POSTs are additionally rejected.
     const origin = request.headers.get("origin");
     // Next's bound address can be 0.0.0.0 while the browser uses localhost.
     const expectedOrigin = `${request.nextUrl.protocol}//${request.headers.get("host") || request.nextUrl.host}`;
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError("กรุณากรอกคำศัพท์", 400);
     const entry = await addWord(body.word, {
       repository: repo,
-      dictionary: new CambridgeDictionary(),
+      dictionary,
     });
     return NextResponse.json({ entry }, { status: 201, headers });
   } catch (error) {
