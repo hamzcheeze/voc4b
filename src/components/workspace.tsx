@@ -58,21 +58,32 @@ export function Workspace({
     [error, setError] = useState(""),
     [today, setToday] = useState(dayKey());
   const generation = useRef(0);
+  const currentSession = useRef<Session | null>(null);
+  const userId = session?.user.id;
   useEffect(() => {
     if (!client) return;
     let active = true;
+    let authEventReceived = false;
+    const updateSession = (next: Session | null) => {
+      if (currentSession.current?.user.id !== next?.user.id) {
+        generation.current++;
+        setEntries([]);
+        setLoading(true);
+        setError("");
+      }
+      currentSession.current = next;
+      setSession(next);
+      setAuthReady(true);
+    };
     client.auth.getSession().then(({ data, error }) => {
-      if (active) {
+      if (active && !authEventReceived) {
         if (error) setError("ตรวจสอบเซสชันไม่สำเร็จ");
-        setSession(data.session);
-        setAuthReady(true);
+        updateSession(data.session);
       }
     });
     const { data } = client.auth.onAuthStateChange((_event, next) => {
-      generation.current++;
-      setEntries([]);
-      setSession(next);
-      setAuthReady(true);
+      authEventReceived = true;
+      if (active) updateSession(next);
     });
     return () => {
       active = false;
@@ -86,9 +97,11 @@ export function Workspace({
     try {
       let rows: Vocabulary[];
       if (mode === "demo") rows = demoStore.list();
-      else if (mode === "live" && session) {
+      else if (mode === "live" && userId && currentSession.current) {
         const response = await fetch("/api/words", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: {
+            Authorization: `Bearer ${currentSession.current.access_token}`,
+          },
           cache: "no-store",
         });
         const data = await response.json();
@@ -105,7 +118,7 @@ export function Workspace({
     } finally {
       if (version === generation.current) setLoading(false);
     }
-  }, [mode, session]);
+  }, [mode, userId]);
   useEffect(() => {
     if (!authReady) return;
     const timer = setTimeout(() => void refresh(), 0);
