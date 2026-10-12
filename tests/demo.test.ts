@@ -28,3 +28,18 @@ it("rejects a word from the history samples without consuming a slot", async () 
   );
   expect(demoStore.list().filter((x) => x.day === dayKey())).toHaveLength(0);
 });
+it("removes one of today's words and accepts a different replacement", async () => {
+  const first = await demoStore.add("rescind");
+  await demoStore.add("serene");
+  await demoStore.removeToday(first.id);
+  await demoStore.add("lucid");
+  expect(
+    demoStore
+      .list()
+      .filter((row) => row.day === dayKey())
+      .map((row) => row.word),
+  ).toEqual(["serene", "lucid"]);
+  await expect(demoStore.removeToday(first.id)).rejects.toThrow(
+    "no longer in today's list",
+  );
+});

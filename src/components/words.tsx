@@ -9,15 +9,28 @@ import { Icon } from "./icon";
 export function WordCard({
   entry,
   headingLevel = 2,
+  onRemove,
 }: {
   entry: Vocabulary;
   headingLevel?: 2 | 3;
+  onRemove?: () => void;
 }) {
   const Heading = headingLevel === 3 ? "h3" : "h2";
   const content = entry.content;
   if (content.kind === "legacy")
     return (
       <article className="word-card">
+        {onRemove && (
+          <button
+            type="button"
+            className="word-remove"
+            onClick={onRemove}
+            aria-label={`Remove ${entry.word}`}
+            title={`Remove ${entry.word}`}
+          >
+            <Icon name="close" />
+          </button>
+        )}
         <div className="word-identity">
           <div className="word-heading">
             <Heading className="word-title" lang="en">
@@ -52,6 +65,17 @@ export function WordCard({
     pronunciations[0];
   return (
     <article className="word-card">
+      {onRemove && (
+        <button
+          type="button"
+          className="word-remove"
+          onClick={onRemove}
+          aria-label={`Remove ${entry.word}`}
+          title={`Remove ${entry.word}`}
+        >
+          <Icon name="close" />
+        </button>
+      )}
       <div className="word-identity">
         <div className="word-heading">
           <Heading className="word-title" lang="en">
@@ -203,14 +227,20 @@ function Pronunciation({
 export function TodayWords({
   entries,
   onAdd,
+  onRemove,
 }: {
   entries: Vocabulary[];
   onAdd: () => void;
+  onRemove: (entry: Vocabulary) => void;
 }) {
   return (
     <div className="word-list">
       {entries.map((entry) => (
-        <WordCard key={entry.id} entry={entry} />
+        <WordCard
+          key={entry.id}
+          entry={entry}
+          onRemove={() => onRemove(entry)}
+        />
       ))}
       {remainingSlots(entries.length) > 0 ? (
         <button className="add-card" onClick={onAdd}>

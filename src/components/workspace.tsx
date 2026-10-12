@@ -27,6 +27,7 @@ interface WorkspaceState {
   today: string;
   refresh: () => Promise<void>;
   add: (word: string) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 }
 const Context = createContext<WorkspaceState | null>(null);
 export function useWorkspace() {
@@ -167,9 +168,29 @@ export function Workspace({
     }
     await refresh();
   }
+  async function remove(id: string) {
+    if (mode === "demo") await demoStore.removeToday(id);
+    else {
+      if (!client) throw new Error("The app isn't ready yet.");
+      const {
+        data: { session: current },
+      } = await client.auth.getSession();
+      if (!current) throw new Error("Please sign in again.");
+      const response = await fetch(`/api/words?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${current.access_token}` },
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        await refresh();
+        throw new Error(data.error);
+      }
+    }
+    await refresh();
+  }
   return (
     <Context.Provider
-      value={{ entries, loading, error, mode, today, refresh, add }}
+      value={{ entries, loading, error, mode, today, refresh, add, remove }}
     >
       <div className="app-shell">
         <header className="masthead">

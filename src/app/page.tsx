@@ -3,19 +3,32 @@ import React, { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "../components/workspace";
 import { TodayWords } from "../components/words";
 import { Icon } from "../components/icon";
-import { dateLabel, DUPLICATE_WORD_MESSAGE } from "../domain/vocabulary";
+import {
+  dateLabel,
+  DUPLICATE_WORD_MESSAGE,
+  type Vocabulary,
+} from "../domain/vocabulary";
 export default function TodayPage() {
-  const { entries, loading, error, today, refresh, add, mode } = useWorkspace();
+  const { entries, loading, error, today, refresh, add, remove, mode } =
+    useWorkspace();
   const [open, setOpen] = useState(false),
     [word, setWord] = useState(""),
     [busy, setBusy] = useState(false),
-    [saveError, setSaveError] = useState("");
+    [saveError, setSaveError] = useState(""),
+    [removeTarget, setRemoveTarget] = useState<Vocabulary | null>(null),
+    [removeBusy, setRemoveBusy] = useState(false),
+    [removeError, setRemoveError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
+  const removeDialog = useRef<HTMLDialogElement>(null);
   const addButton = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (open) dialog.current?.showModal();
     else if (dialog.current?.open) dialog.current.close();
   }, [open]);
+  useEffect(() => {
+    if (removeTarget) removeDialog.current?.showModal();
+    else if (removeDialog.current?.open) removeDialog.current.close();
+  }, [removeTarget]);
   const words = entries.filter((x) => x.day === today);
   function close() {
     if (busy) return;
@@ -41,6 +54,29 @@ export default function TodayPage() {
       setSaveError(e instanceof Error ? e.message : "Could not add the word.");
     } finally {
       setBusy(false);
+    }
+  }
+  function closeRemove() {
+    if (removeBusy) return;
+    setRemoveTarget(null);
+    setRemoveError("");
+  }
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    setRemoveBusy(true);
+    setRemoveError("");
+    try {
+      await remove(removeTarget.id);
+      setRemoveTarget(null);
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLButtonElement>(".add-card")?.focus(),
+      );
+    } catch (e) {
+      setRemoveError(
+        e instanceof Error ? e.message : "Could not remove the word.",
+      );
+    } finally {
+      setRemoveBusy(false);
     }
   }
   return (
@@ -73,6 +109,7 @@ export default function TodayPage() {
             addButton.current = document.activeElement as HTMLElement;
             setOpen(true);
           }}
+          onRemove={(entry) => setRemoveTarget(entry)}
         />
       )}
       <dialog
@@ -116,7 +153,7 @@ export default function TodayPage() {
             disabled={busy}
           />
           {mode === "demo" && (
-            <p className="input-hint">Try: rescind or serene</p>
+            <p className="input-hint">Try: rescind, serene, lucid</p>
           )}
           {saveError && (
             <div role="alert" className="error">
@@ -128,6 +165,55 @@ export default function TodayPage() {
             {!busy && <Icon name="arrow" />}
           </button>
         </form>
+      </dialog>
+      <dialog
+        ref={removeDialog}
+        className="remove-dialog"
+        onCancel={(event) => {
+          event.preventDefault();
+          closeRemove();
+        }}
+        onClose={closeRemove}
+        aria-labelledby="remove-title"
+      >
+        <div className="dialog-heading">
+          <h2 id="remove-title">Remove {removeTarget?.word}?</h2>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Close"
+            onClick={closeRemove}
+            disabled={removeBusy}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+        <p className="remove-copy">
+          This frees a space for another word today.
+        </p>
+        {removeError && (
+          <p role="alert" className="error">
+            {removeError}
+          </p>
+        )}
+        <div className="remove-actions">
+          <button
+            type="button"
+            className="text-button"
+            onClick={closeRemove}
+            disabled={removeBusy}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => void confirmRemove()}
+            disabled={removeBusy}
+          >
+            {removeBusy ? "Removing…" : "Remove"}
+          </button>
+        </div>
       </dialog>
     </>
   );

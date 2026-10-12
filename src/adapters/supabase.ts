@@ -18,7 +18,7 @@ function databaseError(
     error.message.includes("does not exist")
   )
     return new Error(
-      "The database needs an update. Run migration 002_dictionary.sql in the Supabase SQL Editor.",
+      "The database needs an update. Run the latest SQL migration in the Supabase SQL Editor.",
     );
   return new Error(fallback);
 }
@@ -75,6 +75,14 @@ export class SupabaseRepository implements VocabularyRepository {
       throw databaseError(error, "Couldn't save the word. Please try again.");
     }
     return z.array(vocabularySchema).length(1).parse(data)[0];
+  }
+  async removeToday(id: string): Promise<boolean> {
+    const { data, error } = await this.client.rpc("delete_vocabulary_today", {
+      p_id: id,
+    });
+    if (error)
+      throw databaseError(error, "Couldn't remove the word. Please try again.");
+    return z.boolean().parse(data);
   }
   async list(): Promise<Vocabulary[]> {
     // Paginate to avoid the default PostgREST 1000-row truncation (500 learning days).

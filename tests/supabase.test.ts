@@ -3,13 +3,11 @@ import { SupabaseRepository, userClient } from "../src/adapters/supabase";
 import { dictionaryEntry, vocabulary } from "./fixtures/dictionary";
 afterEach(() => vi.unstubAllGlobals());
 it("sends the requested word and complete normalized entry to the new RPC", async () => {
-  const fetcher = vi
-    .fn()
-    .mockResolvedValue(
-      new Response(JSON.stringify([vocabulary]), {
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+  const fetcher = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify([vocabulary]), {
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
   vi.stubGlobal("fetch", fetcher);
   const repository = new SupabaseRepository(
     userClient("https://test.supabase.co", "public", "user-token"),
@@ -39,28 +37,26 @@ it("identifies a missing migration rather than suggesting a save retry", async (
     userClient("https://test.supabase.co", "public", "user-token"),
   );
   await expect(repository.save("ought", dictionaryEntry)).rejects.toThrow(
-    "002_dictionary.sql",
+    "latest SQL migration",
   );
 });
 it("rejects an invalid stored content shape at the repository boundary", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify([
-            {
-              ...vocabulary,
-              content: {
-                kind: "dictionary",
-                entry: { ...dictionaryEntry, definitions: [] },
-              },
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            ...vocabulary,
+            content: {
+              kind: "dictionary",
+              entry: { ...dictionaryEntry, definitions: [] },
             },
-          ]),
-          { headers: { "Content-Type": "application/json" } },
-        ),
+          },
+        ]),
+        { headers: { "Content-Type": "application/json" } },
       ),
+    ),
   );
   const repository = new SupabaseRepository(
     userClient("https://test.supabase.co", "public", "user-token"),

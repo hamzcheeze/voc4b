@@ -16,12 +16,24 @@ it.each([0, 1, 2])("shows one add control below cap, saved=%i", (n) => {
         id: String(i),
       }))}
       onAdd={() => {}}
+      onRemove={() => {}}
     />,
   );
   expect(screen.queryAllByRole("button", { name: /Add a word/ })).toHaveLength(
     n < 2 ? 1 : 0,
   );
   expect(screen.queryAllByRole("heading", { name: "ought" })).toHaveLength(n);
+});
+it("offers per-word removal on Today without a removal action in history", () => {
+  const onRemove = vi.fn();
+  render(
+    <TodayWords entries={[vocabulary]} onAdd={() => {}} onRemove={onRemove} />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Remove ought" }));
+  expect(onRemove).toHaveBeenCalledWith(vocabulary);
+  cleanup();
+  render(<WordCard entry={vocabulary} headingLevel={3} />);
+  expect(screen.queryByRole("button", { name: "Remove ought" })).toBeNull();
 });
 it("displays requested word, canonical phrase, US IPA and every sense/example", () => {
   render(<WordCard entry={vocabulary} />);

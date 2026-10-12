@@ -35,6 +35,12 @@ const examples: Record<string, DictionaryEntry> = {
     "/səˈriːn/",
     "Calm and peaceful, without worry or noise.",
   ),
+  lucid: sample(
+    "lucid",
+    "adjective",
+    "/ˈluː.sɪd/",
+    "Clear and easy to understand.",
+  ),
   thrive: sample(
     "thrive",
     "verb",
@@ -94,7 +100,7 @@ function save(word: string): Vocabulary {
   const entry = examples[word.toLowerCase()];
   if (!entry)
     throw new Error(
-      "Demo mode includes only rescind, serene, thrive, deliberate, subtle, and resilient.",
+      "Demo mode includes only rescind, serene, lucid, thrive, deliberate, subtle, and resilient.",
     );
   const vocabulary: Vocabulary = {
     id: crypto.randomUUID(),
@@ -110,6 +116,17 @@ function save(word: string): Vocabulary {
   }
   return vocabulary;
 }
+function removeToday(id: string): void {
+  const rows = list();
+  const next = rows.filter((row) => row.id !== id || row.day !== dayKey());
+  if (next.length === rows.length)
+    throw new Error("This word is no longer in today's list.");
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next));
+  } catch {
+    throw new Error("Your browser blocked demo storage.");
+  }
+}
 export const demoStore = {
   list,
   async add(input: string): Promise<Vocabulary> {
@@ -117,6 +134,11 @@ export const demoStore = {
     if (typeof navigator !== "undefined" && navigator.locks)
       return navigator.locks.request(KEY, () => save(word));
     return save(word);
+  },
+  async removeToday(id: string): Promise<void> {
+    if (typeof navigator !== "undefined" && navigator.locks)
+      return navigator.locks.request(KEY, () => removeToday(id));
+    removeToday(id);
   },
   reset() {
     localStorage.removeItem(KEY);

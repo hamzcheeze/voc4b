@@ -6,7 +6,7 @@ import { TodayWords, WordCard } from "../src/components/words";
 import { vocabulary } from "./fixtures/dictionary";
 afterEach(cleanup);
 it("keeps one concise action without helper copy", () => {
-  render(<TodayWords entries={[]} onAdd={() => {}} />);
+  render(<TodayWords entries={[]} onAdd={() => {}} onRemove={() => {}} />);
   expect(screen.getByRole("button")).toHaveAccessibleName("Add a word");
 });
 it("uses compact meaning disclosure instead of repeated headings", () => {
@@ -20,6 +20,7 @@ it("completion is a single quiet line", () => {
     <TodayWords
       entries={[vocabulary, { ...vocabulary, id: "2", word: "serene" }]}
       onAdd={() => {}}
+      onRemove={() => {}}
     />,
   );
   expect(screen.getByRole("status")).toHaveTextContent(

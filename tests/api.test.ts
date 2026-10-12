@@ -1,6 +1,6 @@
 import { it, expect, vi, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { GET, POST } from "../src/app/api/words/route";
+import { DELETE, GET, POST } from "../src/app/api/words/route";
 afterEach(() => vi.unstubAllEnvs());
 it("production missing configuration is explicit 503", async () => {
   vi.stubEnv("APP_MODE", "live");
@@ -72,4 +72,31 @@ it("rejects oversized payload early", async () => {
       )
     ).status,
   ).toBe(413);
+});
+it("requires a valid word ID and authentication for deletion", async () => {
+  const invalid = await DELETE(
+    new NextRequest("http://localhost:3000/api/words?id=not-an-id", {
+      method: "DELETE",
+    }),
+  );
+  expect(invalid.status).toBe(400);
+  vi.stubEnv("APP_MODE", "live");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public");
+  const unauthenticated = await DELETE(
+    new NextRequest(
+      "http://localhost:3000/api/words?id=00000000-0000-4000-8000-000000000001",
+      { method: "DELETE" },
+    ),
+  );
+  expect(unauthenticated.status).toBe(401);
+});
+it("rejects deletion from another website", async () => {
+  const response = await DELETE(
+    new NextRequest(
+      "http://localhost:3000/api/words?id=00000000-0000-4000-8000-000000000001",
+      { method: "DELETE", headers: { origin: "https://evil.example" } },
+    ),
+  );
+  expect(response.status).toBe(403);
 });

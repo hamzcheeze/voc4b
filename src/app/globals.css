@@ -260,6 +260,7 @@ h1 {
   flex-direction: column;
 }
 .word-card {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
   column-gap: 48px;
@@ -296,6 +297,31 @@ h1 {
 }
 .word-identity .pronunciation {
   margin-bottom: 0;
+}
+.word-remove {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  transition: color 140ms ease, background 140ms ease;
+}
+.word-remove:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+.word-remove:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.word-remove svg {
+  width: 17px;
+  height: 17px;
 }
 .pronunciation p {
   margin: 0;
@@ -450,6 +476,37 @@ dialog::backdrop {
   font-weight: 550;
   letter-spacing: -0.3px;
   margin: 0;
+}
+.remove-dialog .dialog-heading {
+  margin-bottom: 12px;
+}
+.remove-dialog {
+  width: min(400px, calc(100vw - 40px));
+  padding: 24px;
+}
+.remove-copy {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.remove-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 18px;
+}
+.remove-actions .primary {
+  width: fit-content;
+  min-width: 0;
+  display: inline-flex;
+  justify-content: center;
+  margin-top: 0;
+  background: #b42318;
+  color: #ffffff;
+}
+:root[data-theme="dark"] .remove-actions .primary {
+  background: #ef4444;
+  color: #171717;
 }
 input,
 select {
@@ -658,6 +715,9 @@ dialog input {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 20px;
     padding: 26px 0 28px;
+  }
+  .word-remove {
+    top: 18px;
   }
   .word-title {
     font-size: 25px;

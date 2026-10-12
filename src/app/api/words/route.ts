@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { appMode } from "../../../application/config";
 import { addWord } from "../../../application/add-word";
 import { CambridgeDictionary } from "../../../adapters/dictionary";
@@ -44,6 +45,13 @@ function failure(error: unknown) {
     { status: error instanceof ApiError ? error.status : 422, headers },
   );
 }
+function assertSameOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  // Next's bound address can be 0.0.0.0 while the browser uses localhost.
+  const expectedOrigin = `${request.nextUrl.protocol}//${request.headers.get("host") || request.nextUrl.host}`;
+  if (origin && origin !== expectedOrigin)
+    throw new ApiError("Requests from other websites are not allowed.", 403);
+}
 export async function GET(request: NextRequest) {
   try {
     return NextResponse.json(
@@ -56,11 +64,7 @@ export async function GET(request: NextRequest) {
 }
 export async function POST(request: NextRequest) {
   try {
-    const origin = request.headers.get("origin");
-    // Next's bound address can be 0.0.0.0 while the browser uses localhost.
-    const expectedOrigin = `${request.nextUrl.protocol}//${request.headers.get("host") || request.nextUrl.host}`;
-    if (origin && origin !== expectedOrigin)
-      throw new ApiError("Requests from other websites are not allowed.", 403);
+    assertSameOrigin(request);
     if (Number(request.headers.get("content-length") || 0) > 2048)
       throw new ApiError("Request is too large.", 413);
     const repo = await repository(request);
@@ -84,6 +88,22 @@ export async function POST(request: NextRequest) {
       dictionary,
     });
     return NextResponse.json({ entry }, { status: 201, headers });
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function DELETE(request: NextRequest) {
+  try {
+    assertSameOrigin(request);
+    const id = z
+      .string()
+      .uuid()
+      .safeParse(request.nextUrl.searchParams.get("id"));
+    if (!id.success) throw new ApiError("Choose a word to remove.", 400);
+    const removed = await (await repository(request)).removeToday(id.data);
+    if (!removed)
+      throw new ApiError("This word is no longer in today's list.", 404);
+    return new NextResponse(null, { status: 204, headers });
   } catch (error) {
     return failure(error);
   }

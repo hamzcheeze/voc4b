@@ -13,6 +13,10 @@ const repeatMigration = readFileSync(
   "supabase/migrations/003_unique_words.sql",
   "utf8",
 );
+const removalMigration = readFileSync(
+  "supabase/migrations/004_remove_today_word.sql",
+  "utf8",
+);
 const legacySyllables = [{ text: "awt", stressed: true }];
 
 function entry(headword = "ought to") {
@@ -67,6 +71,8 @@ beforeAll(async () => {
   await db.exec(migration);
   await db.exec(repeatMigration);
   await db.exec(repeatMigration);
+  await db.exec(removalMigration);
+  await db.exec(removalMigration);
 }, 30000);
 
 afterEach(async () => {
@@ -84,9 +90,11 @@ async function asUser(id: string) {
 
 async function save(word: string, data: unknown = entry(word)) {
   return db.query<{
+    id: string;
     word: string;
     user_id: string;
     day: string;
+    slot: number;
     content: unknown;
   }>("select * from public.save_vocabulary($1,$2::jsonb)", [
     word,
@@ -99,13 +107,20 @@ async function clearToday() {
     "select public.clear_vocabulary_today() as deleted",
   );
 }
+async function deleteToday(id: string) {
+  return db.query<{ deleted: boolean }>(
+    "select public.delete_vocabulary_today($1::uuid) as deleted",
+    [id],
+  );
+}
 
 async function seedHistory(id: string, word: string) {
   await db.exec("reset role");
-  await db.query(
-    "insert into public.vocabulary(user_id,day,slot,word,content) values($1,(clock_timestamp() at time zone 'Asia/Bangkok')::date - 1,1,$2,$3::jsonb)",
+  const result = await db.query<{ id: string }>(
+    "insert into public.vocabulary(user_id,day,slot,word,content) values($1,(clock_timestamp() at time zone 'Asia/Bangkok')::date - 1,1,$2,$3::jsonb) returning id",
     [id, word, JSON.stringify({ kind: "dictionary", entry: entry(word) })],
   );
+  return result.rows[0].id;
 }
 
 it("backfills old English entries before removing the old columns and RPC", async () => {
@@ -167,6 +182,8 @@ it("can rerun the migration without changing dictionary content", async () => {
   await db.exec(migration);
   await db.exec(repeatMigration);
   await db.exec(repeatMigration);
+  await db.exec(removalMigration);
+  await db.exec(removalMigration);
   expect((await db.query("select * from public.vocabulary")).rows).toEqual(
     saved.rows,
   );
@@ -248,15 +265,17 @@ it("allows missing pronunciation, source and POS, and an empty audio URL", async
   expect((await save("rescind", withMissing)).rows).toHaveLength(1);
 });
 
-it("denies anonymous calls to save and clear", async () => {
+it("denies anonymous calls to save, remove, and clear", async () => {
   await db.exec("set role anon");
   await expect(save("ought")).rejects.toThrow(/permission denied/);
+  await expect(deleteToday(alice)).rejects.toThrow(/permission denied/);
   await expect(clearToday()).rejects.toThrow(/permission denied/);
 });
 
 it("requires a user identity even for authenticated callers", async () => {
   await asUser("");
   await expect(save("ought")).rejects.toThrow(/authentication_required/);
+  await expect(deleteToday(alice)).rejects.toThrow(/authentication_required/);
   await expect(clearToday()).rejects.toThrow(/authentication_required/);
 });
 
@@ -335,6 +354,51 @@ it("clears only today's words for the caller and restores both daily slots", asy
   expect(
     (await db.query("select word from public.vocabulary order by word")).rows,
   ).toEqual([{ word: "past" }, { word: "serene" }]);
+});
+
+it("removes the first word, compacts slot two, and accepts a replacement", async () => {
+  await asUser(alice);
+  const first = (await save("ought")).rows[0];
+  await save("rescind");
+  expect((await deleteToday(first.id)).rows).toEqual([{ deleted: true }]);
+  expect(
+    (await db.query("select word,slot from public.vocabulary order by slot"))
+      .rows,
+  ).toEqual([{ word: "rescind", slot: 1 }]);
+  expect((await save("serene")).rows[0].slot).toBe(2);
+  expect(
+    (await db.query("select public.vocabulary_today_count() as count")).rows,
+  ).toEqual([{ count: 2 }]);
+});
+
+it("removes the second word and fills its slot with a replacement", async () => {
+  await asUser(alice);
+  await save("ought");
+  const second = (await save("rescind")).rows[0];
+  expect((await deleteToday(second.id)).rows).toEqual([{ deleted: true }]);
+  expect((await save("serene")).rows[0].slot).toBe(2);
+  expect(
+    (await db.query("select word,slot from public.vocabulary order by slot"))
+      .rows,
+  ).toEqual([
+    { word: "ought", slot: 1 },
+    { word: "serene", slot: 2 },
+  ]);
+});
+
+it("cannot remove another user's word or a word from an earlier day", async () => {
+  const olderId = await seedHistory(alice, "older");
+  await asUser(alice);
+  const currentId = (await save("ought")).rows[0].id;
+  await asUser(bob);
+  expect((await deleteToday(currentId)).rows).toEqual([{ deleted: false }]);
+  await asUser(alice);
+  expect((await deleteToday(olderId)).rows).toEqual([{ deleted: false }]);
+  expect((await deleteToday(currentId)).rows).toEqual([{ deleted: true }]);
+  expect((await deleteToday(currentId)).rows).toEqual([{ deleted: false }]);
+  expect((await db.query("select word from public.vocabulary")).rows).toEqual([
+    { word: "older" },
+  ]);
 });
 
 it.each(["", "two words", "ought2", "ควร", "a".repeat(81)])(
