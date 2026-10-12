@@ -1,7 +1,7 @@
 "use client";
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { startSignIn } from "../application/auth-actions";
 import type {
   AuthProviderId,
   AuthProviderOption,
@@ -70,30 +70,42 @@ function LoginError() {
     </p>
   );
 }
-export function AuthPanel({ providers }: { providers: AuthProviderOption[] }) {
+export function AuthPanel({
+  providers,
+  disabled = false,
+}: {
+  providers: AuthProviderOption[];
+  disabled?: boolean;
+}) {
+  const [, startTransition] = useTransition();
   const [busy, setBusy] = useState<AuthProviderId | null>(null);
   const [error, setError] = useState("");
-  async function continueWith(provider: AuthProviderId) {
+  function continueWith(provider: AuthProviderId) {
     setBusy(provider);
     setError("");
-    try {
-      await signIn(provider, { redirectTo: "/" });
-    } catch {
-      setBusy(null);
-      setError("Couldn't start sign-in. Please try again.");
-    }
+    startTransition(async () => {
+      try {
+        await startSignIn(provider);
+      } catch {
+        setBusy(null);
+        setError("Couldn't start sign-in. Please try again.");
+      }
+    });
   }
   return (
     <section className="auth-panel oauth-panel">
       <h1>
-        Sign in to <span className="auth-title-brand wordmark">&nbsp;Voc4b&nbsp;&nbsp;</span>
+        Sign in to{" "}
+        <span className="auth-title-brand wordmark">
+          &nbsp;Voc4b&nbsp;&nbsp;
+        </span>
       </h1>
       <div className="oauth-buttons">
         {providers.map((provider) => (
           <div key={provider.id}>
             <button
               className="oauth-button"
-              disabled={!provider.enabled || busy !== null}
+              disabled={disabled || !provider.enabled || busy !== null}
               aria-describedby={
                 !provider.enabled ? `${provider.id}-setup` : undefined
               }

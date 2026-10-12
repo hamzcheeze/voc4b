@@ -1,0 +1,450 @@
+{
+  "method": {
+    "runtime": "Bun 1.4.3 Next 16.4 production",
+    "library": "empty initially; real Supabase writes and Cambridge/Wiktionary lookups",
+    "inputPauseMs": 1600,
+    "order": "alternating paired",
+    "google": "click to outbound accounts.google.com request; excludes provider login and OAuth callback",
+    "cores": 8,
+    "load": [2.49609375, 3.43701171875, 3.271484375],
+    "baselineCommit": "4e78e500a17992b64abed3e1a8c6f3ad369137b5",
+    "failures": 0,
+    "notes": [
+      "Both sides warmed once before reported samples; five lexical words initially cold per server.",
+      "Navigation and sign-out measure click to visible heading on next animation frame.",
+      "Add measures submit to saved word and closed dialog; excludes the same 1600ms input pause on both sides.",
+      "Sign-out page appearance is separate from completed database revocation; sign-in stays disabled until logout settles.",
+      "No full Google user login or deployed Vercel latency measurement."
+    ]
+  },
+  "before": [
+    {
+      "word": "tranquil",
+      "historyMs": 33.099999994039536,
+      "todayMs": 32.099999994039536,
+      "addMs": 1100.800000011921,
+      "signedOutMs": 159.7000000178814,
+      "signInDepartureMs": 150,
+      "navigationRequests": [
+        {
+          "method": "GET",
+          "path": "/history",
+          "rsc": true
+        },
+        {
+          "method": "GET",
+          "path": "/_next/static/chunks/0s_6rg_u3i3ro.js",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "rsc": true
+        }
+      ],
+      "signInRequests": [
+        {
+          "method": "GET",
+          "path": "/api/auth/providers",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/csrf",
+          "rsc": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/signin/google",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "earnest",
+      "historyMs": 51.79999998211861,
+      "todayMs": 31.899999976158142,
+      "addMs": 713.8999999761581,
+      "signedOutMs": 155.09999999403954,
+      "signInDepartureMs": 150,
+      "navigationRequests": [
+        {
+          "method": "GET",
+          "path": "/history",
+          "rsc": true
+        },
+        {
+          "method": "GET",
+          "path": "/_next/static/chunks/0s_6rg_u3i3ro.js",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "rsc": true
+        }
+      ],
+      "signInRequests": [
+        {
+          "method": "GET",
+          "path": "/api/auth/providers",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/csrf",
+          "rsc": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/signin/google",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "humble",
+      "historyMs": 51.599999994039536,
+      "todayMs": 31.799999982118607,
+      "addMs": 1055.199999988079,
+      "signedOutMs": 156.5,
+      "signInDepartureMs": 67,
+      "navigationRequests": [
+        {
+          "method": "GET",
+          "path": "/history",
+          "rsc": true
+        },
+        {
+          "method": "GET",
+          "path": "/_next/static/chunks/0s_6rg_u3i3ro.js",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "rsc": true
+        }
+      ],
+      "signInRequests": [
+        {
+          "method": "GET",
+          "path": "/api/auth/providers",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/csrf",
+          "rsc": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/signin/google",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "brisk",
+      "historyMs": 53.900000005960464,
+      "todayMs": 32.29999998211861,
+      "addMs": 748.9000000059605,
+      "signedOutMs": 199.69999998807907,
+      "signInDepartureMs": 65,
+      "navigationRequests": [
+        {
+          "method": "GET",
+          "path": "/history",
+          "rsc": true
+        },
+        {
+          "method": "GET",
+          "path": "/_next/static/chunks/0s_6rg_u3i3ro.js",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "rsc": true
+        }
+      ],
+      "signInRequests": [
+        {
+          "method": "GET",
+          "path": "/api/auth/providers",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/csrf",
+          "rsc": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/signin/google",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "nimble",
+      "historyMs": 54.5,
+      "todayMs": 30.69999998807907,
+      "addMs": 1247.800000011921,
+      "signedOutMs": 150.30000001192093,
+      "signInDepartureMs": 62,
+      "navigationRequests": [
+        {
+          "method": "GET",
+          "path": "/history",
+          "rsc": true
+        },
+        {
+          "method": "GET",
+          "path": "/_next/static/chunks/0s_6rg_u3i3ro.js",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/",
+          "rsc": true
+        }
+      ],
+      "signInRequests": [
+        {
+          "method": "GET",
+          "path": "/api/auth/providers",
+          "rsc": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/csrf",
+          "rsc": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/signin/google",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    }
+  ],
+  "after": [
+    {
+      "word": "tranquil",
+      "historyMs": 30.19999998807907,
+      "todayMs": 25.19999998807907,
+      "addMs": 421.19999998807907,
+      "signedOutMs": 13.900000005960464,
+      "signInDepartureMs": 57,
+      "navigationRequests": [],
+      "signInRequests": [
+        {
+          "method": "POST",
+          "path": "/",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "earnest",
+      "historyMs": 29.700000017881393,
+      "todayMs": 23.80000001192093,
+      "addMs": 417.7999999821186,
+      "signedOutMs": 13.900000005960464,
+      "signInDepartureMs": 54,
+      "navigationRequests": [],
+      "signInRequests": [
+        {
+          "method": "POST",
+          "path": "/",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "humble",
+      "historyMs": 30.200000017881393,
+      "todayMs": 24.099999994039536,
+      "addMs": 479.59999999403954,
+      "signedOutMs": 14.400000005960464,
+      "signInDepartureMs": 145,
+      "navigationRequests": [],
+      "signInRequests": [
+        {
+          "method": "POST",
+          "path": "/",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "brisk",
+      "historyMs": 31.5,
+      "todayMs": 27.599999994039536,
+      "addMs": 486.7000000178814,
+      "signedOutMs": 13.099999994039536,
+      "signInDepartureMs": 55,
+      "navigationRequests": [],
+      "signInRequests": [
+        {
+          "method": "POST",
+          "path": "/",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    },
+    {
+      "word": "nimble",
+      "historyMs": 27.599999994039536,
+      "todayMs": 25.80000001192093,
+      "addMs": 449,
+      "signedOutMs": 15.699999988079071,
+      "signInDepartureMs": 51,
+      "navigationRequests": [],
+      "signInRequests": [
+        {
+          "method": "POST",
+          "path": "/",
+          "rsc": false
+        }
+      ],
+      "sessionRevoked": true,
+      "saved": true,
+      "directHistoryAndReload": true
+    }
+  ],
+  "order": [
+    {
+      "side": "before",
+      "word": "tranquil"
+    },
+    {
+      "side": "after",
+      "word": "tranquil"
+    },
+    {
+      "side": "after",
+      "word": "earnest"
+    },
+    {
+      "side": "before",
+      "word": "earnest"
+    },
+    {
+      "side": "before",
+      "word": "humble"
+    },
+    {
+      "side": "after",
+      "word": "humble"
+    },
+    {
+      "side": "after",
+      "word": "brisk"
+    },
+    {
+      "side": "before",
+      "word": "brisk"
+    },
+    {
+      "side": "before",
+      "word": "nimble"
+    },
+    {
+      "side": "after",
+      "word": "nimble"
+    }
+  ],
+  "beforeSummary": {
+    "historyMs": {
+      "median": 51.79999998211861,
+      "min": 33.099999994039536,
+      "max": 54.5,
+      "count": 5
+    },
+    "todayMs": {
+      "median": 31.899999976158142,
+      "min": 30.69999998807907,
+      "max": 32.29999998211861,
+      "count": 5
+    },
+    "addMs": {
+      "median": 1055.199999988079,
+      "min": 713.8999999761581,
+      "max": 1247.800000011921,
+      "count": 5
+    },
+    "signedOutMs": {
+      "median": 156.5,
+      "min": 150.30000001192093,
+      "max": 199.69999998807907,
+      "count": 5
+    },
+    "signInDepartureMs": {
+      "median": 67,
+      "min": 62,
+      "max": 150,
+      "count": 5
+    }
+  },
+  "afterSummary": {
+    "historyMs": {
+      "median": 30.19999998807907,
+      "min": 27.599999994039536,
+      "max": 31.5,
+      "count": 5
+    },
+    "todayMs": {
+      "median": 25.19999998807907,
+      "min": 23.80000001192093,
+      "max": 27.599999994039536,
+      "count": 5
+    },
+    "addMs": {
+      "median": 449,
+      "min": 417.7999999821186,
+      "max": 486.7000000178814,
+      "count": 5
+    },
+    "signedOutMs": {
+      "median": 13.900000005960464,
+      "min": 13.099999994039536,
+      "max": 15.699999988079071,
+      "count": 5
+    },
+    "signInDepartureMs": {
+      "median": 55,
+      "min": 51,
+      "max": 145,
+      "count": 5
+    }
+  }
+}

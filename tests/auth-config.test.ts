@@ -1,10 +1,32 @@
 // @vitest-environment node
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import {
   createAuthConfig,
   authoritativeGoogleEmail,
 } from "../src/application/auth-config";
 import { authProviderOptions } from "../src/application/auth-providers";
+
+it("accepts authoritative Google identity without preliminary database reads", async () => {
+  const getUserByAccount = vi.fn(async () => null);
+  const getUserByEmail = vi.fn(async () => null);
+  const config = createAuthConfig({}, { getUserByAccount, getUserByEmail });
+  const accepted = await config.callbacks?.signIn?.({
+    user: { id: "google-subject" },
+    account: {
+      provider: "google",
+      type: "oidc",
+      providerAccountId: "google-subject",
+    },
+    profile: {
+      sub: "google-subject",
+      email: "alice@gmail.com",
+      email_verified: true,
+    },
+  });
+  expect(accepted).toBe(true);
+  expect(getUserByAccount).not.toHaveBeenCalled();
+  expect(getUserByEmail).not.toHaveBeenCalled();
+});
 
 it("accepts the supplied Google environment aliases without exposing credentials", () => {
   const options = authProviderOptions({

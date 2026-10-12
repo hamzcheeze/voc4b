@@ -7,7 +7,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
+import { WorkspaceLink } from "./workspace-link";
+import TodayView from "./today-view";
+import HistoryView from "./history-view";
 import { usePathname } from "next/navigation";
 import {
   SessionProvider,
@@ -142,6 +144,23 @@ function WorkspaceContent({
     [error, setError] = useState(seed?.kind === "failed" ? seed.error : ""),
     [today, setToday] = useState(seed?.today ?? dayKey());
   const generation = useRef(0);
+  const [logout, setLogout] = useState<"idle" | "pending" | "failed" | "done">(
+    "idle",
+  );
+  async function leave() {
+    if (logout === "pending") return;
+    generation.current++;
+    setEntries([]);
+    setLogout("pending");
+    try {
+      const response = await fetch("/api/auth/revoke", { method: "POST" });
+      if (!response.ok) throw new Error("Session revocation failed.");
+      await signOut({ redirect: false });
+      setLogout("done");
+    } catch {
+      setLogout("failed");
+    }
+  }
   useEffect(
     () => () => {
       generation.current++;
@@ -253,22 +272,26 @@ function WorkspaceContent({
       value={{ entries, loading, error, mode, today, refresh, add, remove }}
     >
       <div className="app-shell">
-        {(mode === "demo" || (mode === "live" && authReady && session)) && (
+        {(mode === "demo" ||
+          (mode === "live" && authReady && session && logout === "idle")) && (
           <header className="masthead">
-            <Link href="/" className="brand" aria-label="Voc4b · Home">
+            <WorkspaceLink href="/" className="brand" aria-label="Voc4b · Home">
               <Icon name="notebook" />
               <span className="wordmark">Voc4b</span>
-            </Link>
+            </WorkspaceLink>
             <nav aria-label="Main navigation">
-              <Link href="/" aria-current={path === "/" ? "page" : undefined}>
+              <WorkspaceLink
+                href="/"
+                aria-current={path === "/" ? "page" : undefined}
+              >
                 Today
-              </Link>
-              <Link
+              </WorkspaceLink>
+              <WorkspaceLink
                 href="/history"
                 aria-current={path === "/history" ? "page" : undefined}
               >
                 History
-              </Link>
+              </WorkspaceLink>
             </nav>
             <div className="account-tools">
               <ThemeToggle />
@@ -291,14 +314,7 @@ function WorkspaceContent({
                 </details>
               )}
               {mode === "live" && session && (
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    void signOut({ redirect: false }).catch(() =>
-                      setError("Couldn't sign out. Please try again."),
-                    )
-                  }
-                >
+                <button className="text-button" onClick={() => void leave()}>
                   Sign out
                 </button>
               )}
@@ -318,10 +334,33 @@ function WorkspaceContent({
             <p role="status" className="loading">
               Loading…
             </p>
-          ) : mode === "live" && !session ? (
-            <AuthPanel providers={providers} />
+          ) : mode === "live" && (!session || logout !== "idle") ? (
+            <>
+              <AuthPanel
+                providers={providers}
+                disabled={logout === "pending" || logout === "failed"}
+              />
+              {logout === "pending" && (
+                <p className="auth-error" role="status">
+                  Signing out…
+                </p>
+              )}
+              {logout === "failed" && (
+                <p className="error auth-error" role="alert">
+                  Couldn't sign out. Your session is still active.
+                  <button onClick={() => void leave()}>Try again</button>
+                </p>
+              )}
+            </>
           ) : (
-            children
+            <>
+              {path === "/" ? (
+                <TodayView />
+              ) : path === "/history" ? (
+                <HistoryView />
+              ) : null}
+              {children}
+            </>
           )}
         </main>
       </div>

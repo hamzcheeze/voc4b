@@ -20,6 +20,9 @@ const authentication = vi.hoisted(() => ({
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
+vi.mock("../src/application/auth-actions", () => ({
+  startSignIn: authentication.signIn,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),

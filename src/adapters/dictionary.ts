@@ -13,6 +13,7 @@ const WIKTIONARY_ORIGIN = "https://simple.wiktionary.org";
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const CACHE_TTL = 30 * 60 * 1000;
 const CACHE_LIMIT = 1000;
+const LOOKUP_LIMIT = 32;
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 const UNAVAILABLE = "The dictionary is unavailable. This word wasn't saved.";
@@ -225,11 +226,27 @@ export class CambridgeDictionary implements DictionaryProvider {
     { entry: DictionaryEntry; expiresAt: number }
   >();
 
+  private readonly inFlight = new Map<string, Promise<DictionaryEntry>>();
+
   async lookup(input: string): Promise<DictionaryEntry> {
     const word = validateWord(input).toLowerCase();
     const cached = this.cache.get(word);
     if (cached && cached.expiresAt > Date.now()) return cached.entry;
     this.cache.delete(word);
+    const pending = this.inFlight.get(word);
+    if (pending) return pending;
+    if (this.inFlight.size >= LOOKUP_LIMIT)
+      throw new Error("The dictionary is busy. Please try again.");
+    const request = this.fetchEntry(word);
+    this.inFlight.set(word, request);
+    try {
+      return await request;
+    } finally {
+      this.inFlight.delete(word);
+    }
+  }
+
+  private async fetchEntry(word: string): Promise<DictionaryEntry> {
     const [html, verbForms] = await Promise.all([
       fetchHtml(
         new URL(

@@ -262,3 +262,57 @@ it("evicts the oldest success after 1,000 cached words", async () => {
     "You ought to return.",
   );
 });
+
+it("joins simultaneous lookups of the same normalized word", async () => {
+  const fetcher = pages();
+  const dictionary = new CambridgeDictionary();
+  const entries = await Promise.all([
+    dictionary.lookup("ought"),
+    dictionary.lookup(" OUGHT "),
+    dictionary.lookup("Ought"),
+  ]);
+  expect(entries).toEqual([dictionaryEntry, dictionaryEntry, dictionaryEntry]);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("releases a failed shared lookup so the next attempt can succeed", async () => {
+  const fetcher = vi.fn().mockRejectedValue(new Error("offline"));
+  vi.stubGlobal("fetch", fetcher);
+  const dictionary = new CambridgeDictionary();
+  const results = await Promise.allSettled([
+    dictionary.lookup("ought"),
+    dictionary.lookup("OUGHT"),
+  ]);
+  expect(results.every((result) => result.status === "rejected")).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  pages();
+  expect(await dictionary.lookup("ought")).toEqual(dictionaryEntry);
+});
+
+it("bounds concurrent distinct lookups without blocking a matching in-flight word", async () => {
+  vi.useFakeTimers();
+  const fetcher = vi.fn(
+    async () => new Response(new ReadableStream<Uint8Array>()),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const dictionary = new CambridgeDictionary();
+  const first = dictionary.lookup("ought");
+  const requests = [first];
+  for (let index = 0; index < 31; index++) {
+    requests.push(
+      dictionary.lookup(
+        `word${String.fromCharCode(97 + (index % 26))}${String.fromCharCode(97 + Math.floor(index / 26))}`,
+      ),
+    );
+  }
+  requests.push(dictionary.lookup("OUGHT"));
+  const settlement = Promise.allSettled(requests);
+  await expect(dictionary.lookup("different")).rejects.toThrow(/busy/);
+  expect(fetcher).toHaveBeenCalledTimes(64);
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(
+    (await settlement).every((result) => result.status === "rejected"),
+  ).toBe(true);
+  pages();
+  expect(await dictionary.lookup("ought")).toEqual(dictionaryEntry);
+});

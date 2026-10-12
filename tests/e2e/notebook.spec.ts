@@ -4,6 +4,34 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
 });
+test("Today and History switch locally and support direct URLs and browser history", async ({
+  page,
+}) => {
+  const navigations: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      request.isNavigationRequest() ||
+      url.searchParams.has("_rsc") ||
+      url.pathname === "/api/words"
+    )
+      navigations.push(request.url());
+  });
+  await page.getByRole("link", { name: "History" }).click();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(page).toHaveURL(/\/history$/);
+  await page.getByRole("link", { name: "Today" }).click();
+  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+  expect(navigations).toEqual([]);
+  await page.goto("/history");
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+});
 test("zero → one → two, persistence, history and demo reset", async ({
   page,
 }) => {
@@ -26,9 +54,7 @@ test("zero → one → two, persistence, history and demo reset", async ({
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(0);
   await page.getByRole("link", { name: "History" }).click();
-  await expect(
-    page.getByRole("heading", { name: "History" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await page.getByLabel("Time period", { exact: true }).selectOption("year");
   await page.getByLabel("Year", { exact: true }).fill("1900");
   await expect(page.getByText("No words found for this period")).toBeVisible();

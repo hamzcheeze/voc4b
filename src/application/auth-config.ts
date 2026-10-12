@@ -129,6 +129,7 @@ export function createAuthConfig(
       async signIn({ account, profile }) {
         if (account?.provider !== "google") return true;
         if (!adapter?.getUserByAccount || !adapter.getUserByEmail) return false;
+        if (authoritativeGoogleEmail(profile)) return true;
         const linked = await adapter.getUserByAccount({
           provider: "google",
           providerAccountId: account.providerAccountId,
