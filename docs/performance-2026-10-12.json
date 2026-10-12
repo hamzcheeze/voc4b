@@ -1,0 +1,450 @@
+{
+  "method": {
+    "runtime": "Bun / Next.js production builds, local loopback servers without server profiling",
+    "database": "Real Supabase, isolated temporary accounts with one existing word",
+    "home": "Navigation start to first frame containing saved vocabulary",
+    "add": "Form submit event to first frame with saved word and closed dialog",
+    "runs": "Five per version, paired interleaved order, same words and dataset",
+    "dictionaryCache": "Timed words cold in both process caches; seed and warmup outside timed interval",
+    "validation": "Every POST 201, content verified against DB read-back, temporary accounts deleted",
+    "excludes": "Google provider interaction, Vercel cold starts and Playwright polling overhead",
+    "machineCores": 8,
+    "initialLoadAverage": [3.5810546875, 4.173828125, 3.97119140625],
+    "baselineCommit": "641084e1161336448d580180d5ae898a71c5baad",
+    "versions": {
+      "bun": "1.4.3",
+      "next": "16.4.0"
+    }
+  },
+  "summary": {
+    "before": {
+      "homeMs": {
+        "count": 5,
+        "medianMs": 590.5,
+        "rangeMs": [460.59999999403954, 630.1000000238419]
+      },
+      "addMs": {
+        "count": 5,
+        "medianMs": 1060.9000000059605,
+        "rangeMs": [1015.3000000119209, 1164.5]
+      },
+      "browserListReads": {
+        "initialPages": 5,
+        "afterSuccessfulSaves": 5
+      }
+    },
+    "after": {
+      "homeMs": {
+        "count": 5,
+        "medianMs": 284.7000000178814,
+        "rangeMs": [273.7999999821186, 342.30000001192093]
+      },
+      "addMs": {
+        "count": 5,
+        "medianMs": 757.0999999940395,
+        "rangeMs": [602, 778.7000000178814]
+      },
+      "browserListReads": {
+        "initialPages": 0,
+        "afterSuccessfulSaves": 0
+      }
+    }
+  },
+  "runs": {
+    "before": [
+      {
+        "word": "serene",
+        "homeMs": 630.1000000238419,
+        "addMs": 1052.0999999940395,
+        "requestsBeforeSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "requestsAfterSave": [
+          {
+            "method": "POST",
+            "path": "/api/words"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "ambush",
+        "homeMs": 460.59999999403954,
+        "addMs": 1164.5,
+        "requestsBeforeSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "requestsAfterSave": [
+          {
+            "method": "POST",
+            "path": "/api/words"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "cite",
+        "homeMs": 489,
+        "addMs": 1095.699999988079,
+        "requestsBeforeSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "requestsAfterSave": [
+          {
+            "method": "POST",
+            "path": "/api/words"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "misery",
+        "homeMs": 590.5,
+        "addMs": 1060.9000000059605,
+        "requestsBeforeSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "requestsAfterSave": [
+          {
+            "method": "POST",
+            "path": "/api/words"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "notorious",
+        "homeMs": 606.5,
+        "addMs": 1015.3000000119209,
+        "requestsBeforeSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "requestsAfterSave": [
+          {
+            "method": "POST",
+            "path": "/api/words"
+          },
+          {
+            "method": "GET",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      }
+    ],
+    "after": [
+      {
+        "word": "serene",
+        "homeMs": 279.7000000178814,
+        "addMs": 602,
+        "requestsBeforeSave": [],
+        "requestsAfterSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "POST",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "ambush",
+        "homeMs": 324.30000001192093,
+        "addMs": 778.7000000178814,
+        "requestsBeforeSave": [],
+        "requestsAfterSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "POST",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "cite",
+        "homeMs": 284.7000000178814,
+        "addMs": 672.3000000119209,
+        "requestsBeforeSave": [],
+        "requestsAfterSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "POST",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "misery",
+        "homeMs": 273.7999999821186,
+        "addMs": 776.5,
+        "requestsBeforeSave": [],
+        "requestsAfterSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "POST",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      },
+      {
+        "word": "notorious",
+        "homeMs": 342.30000001192093,
+        "addMs": 757.0999999940395,
+        "requestsBeforeSave": [],
+        "requestsAfterSave": [
+          {
+            "method": "GET",
+            "path": "/api/auth/session"
+          },
+          {
+            "method": "POST",
+            "path": "/api/words"
+          }
+        ],
+        "verifiedWrite": true
+      }
+    ]
+  },
+  "failures": [],
+  "networkProfile": {
+    "capture": "Separate diagnostic run with fetch tracing; reported timings use uninstrumented servers",
+    "sides": {
+      "before": {
+        "databaseRequestHeadersMedianMs": 128.45164549999754,
+        "lookups": [
+          {
+            "word": "serene",
+            "preflightRequestStartGapMs": 127,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 75.44783299999835,
+                "status": 404
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 201.4442080000008,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "ambush",
+            "preflightRequestStartGapMs": 125,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 75.58075000000099,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 160.43870900000184,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "cite",
+            "preflightRequestStartGapMs": 195,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 66.25191600000107,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 192.04466700000194,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "misery",
+            "preflightRequestStartGapMs": 135,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 75.99812500000553,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 208.13233300000138,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "notorious",
+            "preflightRequestStartGapMs": 129,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 151.11558399999922,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 159.29100000000471,
+                "status": 200
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "databaseRequestHeadersMedianMs": 126.06277050000062,
+        "lookups": [
+          {
+            "word": "serene",
+            "preflightRequestStartGapMs": 0,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 79.49141700000109,
+                "status": 404
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 137.0942920000016,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "ambush",
+            "preflightRequestStartGapMs": 0,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 70.44708399999581,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 141.75037500000326,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "cite",
+            "preflightRequestStartGapMs": 0,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 80.32820899999933,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 240.32070899999962,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "misery",
+            "preflightRequestStartGapMs": 0,
+            "external": [
+              {
+                "source": "Cambridge",
+                "headersMs": 155.3229580000043,
+                "status": 200
+              },
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 294.91399999999703,
+                "status": 200
+              }
+            ]
+          },
+          {
+            "word": "notorious",
+            "preflightRequestStartGapMs": 0,
+            "external": [
+              {
+                "source": "Simple Wiktionary",
+                "headersMs": 98.13337499999761,
+                "status": 200
+              },
+              {
+                "source": "Cambridge",
+                "headersMs": 162.49691699999676,
+                "status": 200
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

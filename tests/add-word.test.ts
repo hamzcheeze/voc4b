@@ -49,3 +49,26 @@ it("propagates atomic cap rejection after a concurrent winner", async () => {
   p.repository.save.mockRejectedValue(new Error("Daily limit reached"));
   await expect(addWord("rescind", p)).rejects.toThrow("Daily limit");
 });
+
+it("runs independent preflight reads together, then looks up the dictionary", async () => {
+  const count = Promise.withResolvers<number>();
+  const duplicate = Promise.withResolvers<boolean>();
+  const p = ports();
+  p.repository.countToday.mockReturnValue(count.promise);
+  p.repository.hasWord.mockReturnValue(duplicate.promise);
+  const result = addWord("rescind", p);
+  expect(p.repository.countToday).toHaveBeenCalledTimes(1);
+  expect(p.repository.hasWord).toHaveBeenCalledWith("rescind");
+  expect(p.dictionary.lookup).not.toHaveBeenCalled();
+  count.resolve(1);
+  await Promise.resolve();
+  expect(p.dictionary.lookup).not.toHaveBeenCalled();
+  duplicate.resolve(false);
+  await expect(result).resolves.toEqual(vocabulary);
+});
+it("retains the daily-limit message when a full library also contains the word", async () => {
+  const p = ports(2);
+  p.repository.hasWord.mockResolvedValue(true);
+  await expect(addWord("ought", p)).rejects.toThrow("two-word limit");
+  expect(p.dictionary.lookup).not.toHaveBeenCalled();
+});

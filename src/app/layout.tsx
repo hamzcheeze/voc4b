@@ -2,7 +2,13 @@ import { auth } from "../auth";
 import { authProviderOptions } from "../application/auth-providers";
 import type { Metadata } from "next";
 import { appMode } from "../application/config";
-import { Workspace } from "../components/workspace";
+import {
+  Workspace,
+  type InitialWorkspaceSnapshot,
+} from "../components/workspace";
+import { SupabaseRepository, serviceClient } from "../adapters/supabase";
+import { dayKey } from "../domain/vocabulary";
+import { z } from "zod";
 import "@fontsource-variable/inter";
 import "@fontsource/pacifico/latin-400.css";
 import { THEME_BOOTSTRAP } from "../components/theme-script";
@@ -20,6 +26,42 @@ export default async function RootLayout({
 }) {
   const mode = appMode(process.env);
   const session = mode === "live" ? await auth() : null;
+  let initialSnapshot: InitialWorkspaceSnapshot | undefined;
+  if (mode === "live" && session?.user?.id) {
+    const userId = session.user.id;
+    try {
+      const configuration = z
+        .object({
+          NEXT_PUBLIC_SUPABASE_URL: z.url(),
+          SUPABASE_SECRET_KEY: z.string().min(1),
+        })
+        .parse(process.env);
+      const repository = new SupabaseRepository(
+        serviceClient(
+          configuration.NEXT_PUBLIC_SUPABASE_URL,
+          configuration.SUPABASE_SECRET_KEY,
+        ),
+        z.uuid().parse(userId),
+      );
+      const entries = await repository.list();
+      initialSnapshot = {
+        kind: "loaded",
+        userId,
+        today: dayKey(),
+        entries,
+      };
+    } catch (error) {
+      initialSnapshot = {
+        kind: "failed",
+        userId,
+        today: dayKey(),
+        error:
+          error instanceof Error
+            ? error.message
+            : "Couldn't load your words. Please try again.",
+      };
+    }
+  }
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -34,6 +76,7 @@ export default async function RootLayout({
           mode={mode}
           session={session}
           providers={authProviderOptions(process.env)}
+          initialSnapshot={initialSnapshot}
         >
           {children}
         </Workspace>

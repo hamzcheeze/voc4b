@@ -47,20 +47,29 @@ function session(id = "first"): Session {
   };
 }
 function Controls() {
-  const { refresh } = useWorkspace();
-  return <button onClick={() => void refresh()}>Refresh test data</button>;
+  const { refresh, add, remove } = useWorkspace();
+  return (
+    <>
+      <button onClick={() => void refresh()}>Refresh test data</button>
+      <button onClick={() => void add("rescind")}>Add test word</button>
+      <button onClick={() => void remove("1")}>Remove test word</button>
+    </>
+  );
 }
 const providers = [
   { id: "google", name: "Google", enabled: true },
   { id: "facebook", name: "Facebook", enabled: false },
   { id: "chatgpt", name: "ChatGPT", enabled: false },
 ] satisfies Parameters<typeof Workspace>[0]["providers"];
-function mount() {
+function mount(
+  initialSnapshot?: Parameters<typeof Workspace>[0]["initialSnapshot"],
+) {
   return render(
     <Workspace
       mode="live"
       session={authentication.session}
       providers={providers}
+      initialSnapshot={initialSnapshot}
     >
       <TodayPage />
       <Controls />
@@ -172,4 +181,149 @@ it("keeps an in-flight load valid during the same owner's session renewal", asyn
   );
   expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
   expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it("renders the server owner's words immediately without another list request", async () => {
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  expect(screen.getByRole("heading", { name: "ought" })).toBeVisible();
+  expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
+  expect(fetch).not.toHaveBeenCalled();
+});
+it("does not expose another owner's server snapshot", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(JSON.stringify({ entries: [] }))),
+  );
+  mount({
+    kind: "loaded",
+    userId: "second",
+    today: dayKey(),
+    entries: [saved],
+  });
+  expect(
+    screen.queryByRole("heading", { name: "ought" }),
+  ).not.toBeInTheDocument();
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  expect(
+    screen.queryByRole("heading", { name: "ought" }),
+  ).not.toBeInTheDocument();
+});
+it("shows a server load failure immediately and lets the user retry", async () => {
+  mount({
+    kind: "failed",
+    userId: "first",
+    today: dayKey(),
+    error: "Couldn't load your words.",
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Couldn't load your words.",
+  );
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("loads a new account rather than reusing the previous owner's seed", async () => {
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            entries: [{ ...saved, id: "second", word: "rescind" }],
+          }),
+        ),
+    ),
+  );
+  emit(session("second"));
+  expect(
+    screen.queryByRole("heading", { name: "ought" }),
+  ).not.toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("reloads the same account after signout rather than restoring its old server seed", async () => {
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  emit(null);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            entries: [{ ...saved, id: "replacement", word: "rescind" }],
+          }),
+        ),
+    ),
+  );
+  emit(session());
+  expect(
+    screen.queryByRole("heading", { name: "ought" }),
+  ).not.toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("shows a saved word from the POST response without reloading the library", async () => {
+  const added = { ...saved, id: "new-word", word: "rescind" };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({ entry: added }), { status: 201 }),
+    ),
+  );
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Add test word" }));
+  expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "ought" })).toBeVisible();
+  expect(screen.getByLabelText("2 of 2 words saved")).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(fetch).mock.lastCall?.[1]?.method).toBe("POST");
+});
+it("does not let an older list response erase a completed addition", async () => {
+  const pending = Promise.withResolvers<Response>();
+  const added = { ...saved, id: "new-word", word: "rescind" };
+  const fetcher = vi.fn((_url: RequestInfo | URL, options?: RequestInit) =>
+    options?.method === "POST"
+      ? Promise.resolve(
+          new Response(JSON.stringify({ entry: added }), { status: 201 }),
+        )
+      : pending.promise,
+  );
+  vi.stubGlobal("fetch", fetcher);
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Refresh test data" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add test word" }));
+  expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
+  await act(async () => {
+    pending.resolve(new Response(JSON.stringify({ entries: [saved] })));
+  });
+  expect(screen.getByRole("heading", { name: "rescind" })).toBeVisible();
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it("removes a confirmed word locally without letting an older load restore it", async () => {
+  const pending = Promise.withResolvers<Response>();
+  const fetcher = vi.fn((_url: RequestInfo | URL, options?: RequestInit) =>
+    options?.method === "DELETE"
+      ? Promise.resolve(new Response(null, { status: 204 }))
+      : pending.promise,
+  );
+  vi.stubGlobal("fetch", fetcher);
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Refresh test data" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove test word" }));
+  await waitFor(() =>
+    expect(screen.getByLabelText("0 of 2 words saved")).toBeVisible(),
+  );
+  await act(async () => {
+    pending.resolve(new Response(JSON.stringify({ entries: [saved] })));
+  });
+  expect(
+    screen.queryByRole("heading", { name: "ought" }),
+  ).not.toBeInTheDocument();
+  expect(fetcher).toHaveBeenCalledTimes(2);
 });

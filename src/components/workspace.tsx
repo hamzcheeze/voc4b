@@ -19,10 +19,17 @@ import type { Session } from "next-auth";
 import type { AuthProviderOption } from "../application/auth-providers";
 import { AuthPanel } from "./auth-panel";
 import type { AppMode } from "../application/config";
-import { dayKey, type Vocabulary } from "../domain/vocabulary";
+import {
+  dayKey,
+  vocabularySchema,
+  type Vocabulary,
+} from "../domain/vocabulary";
 import { demoStore } from "../adapters/demo";
 import { ThemeToggle } from "./theme-toggle";
 import { Icon } from "./icon";
+export type InitialWorkspaceSnapshot =
+  | { kind: "loaded"; userId: string; today: string; entries: Vocabulary[] }
+  | { kind: "failed"; userId: string; today: string; error: string };
 interface WorkspaceState {
   entries: Vocabulary[];
   loading: boolean;
@@ -44,11 +51,13 @@ export function Workspace({
   mode,
   session,
   providers,
+  initialSnapshot,
 }: {
   children: React.ReactNode;
   mode: AppMode;
   session: Session | null;
   providers: AuthProviderOption[];
+  initialSnapshot?: InitialWorkspaceSnapshot;
 }) {
   return (
     <SessionProvider
@@ -56,7 +65,11 @@ export function Workspace({
       refetchOnWindowFocus={false}
       refetchInterval={3600}
     >
-      <SessionWorkspace mode={mode} providers={providers}>
+      <SessionWorkspace
+        mode={mode}
+        providers={providers}
+        initialSnapshot={initialSnapshot}
+      >
         {children}
       </SessionWorkspace>
     </SessionProvider>
@@ -66,13 +79,22 @@ function SessionWorkspace({
   children,
   mode,
   providers,
+  initialSnapshot,
 }: {
   children: React.ReactNode;
   mode: AppMode;
   providers: AuthProviderOption[];
+  initialSnapshot?: InitialWorkspaceSnapshot;
 }) {
   const { data: session, status } = useSession();
   const userId = session?.user?.id;
+  const [bootstrap, setBootstrap] = useState(() => ({
+    userId,
+    snapshot: initialSnapshot,
+  }));
+  if (bootstrap.userId !== userId) {
+    setBootstrap({ userId, snapshot: undefined });
+  }
   useEffect(() => {
     if (mode === "live" && userId) void getSession({ broadcast: false });
   }, [mode, userId]);
@@ -83,6 +105,9 @@ function SessionWorkspace({
       authReady={status !== "loading"}
       mode={mode}
       providers={providers}
+      initialSnapshot={
+        bootstrap.userId === userId ? bootstrap.snapshot : undefined
+      }
     >
       {children}
     </WorkspaceContent>
@@ -94,20 +119,29 @@ function WorkspaceContent({
   providers,
   session,
   authReady,
+  initialSnapshot,
 }: {
   children: React.ReactNode;
   mode: AppMode;
   providers: AuthProviderOption[];
   session: Session | null;
   authReady: boolean;
+  initialSnapshot?: InitialWorkspaceSnapshot;
 }) {
   const path = usePathname();
-  const [entries, setEntries] = useState<Vocabulary[]>([]),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [today, setToday] = useState(dayKey());
-  const generation = useRef(0);
   const userId = session?.user?.id;
+  const [seed] = useState(() =>
+    mode === "live" && userId && initialSnapshot?.userId === userId
+      ? initialSnapshot
+      : undefined,
+  );
+  const [entries, setEntries] = useState<Vocabulary[]>(
+      seed?.kind === "loaded" ? seed.entries : [],
+    ),
+    [loading, setLoading] = useState(!seed),
+    [error, setError] = useState(seed?.kind === "failed" ? seed.error : ""),
+    [today, setToday] = useState(seed?.today ?? dayKey());
+  const generation = useRef(0);
   useEffect(
     () => () => {
       generation.current++;
@@ -141,10 +175,10 @@ function WorkspaceContent({
     }
   }, [mode, userId]);
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || seed) return;
     const timer = setTimeout(() => void refresh(), 0);
     return () => clearTimeout(timer);
-  }, [authReady, refresh]);
+  }, [authReady, refresh, seed]);
   useEffect(() => {
     const check = () => {
       if (dayKey() !== today) {
@@ -180,6 +214,16 @@ function WorkspaceContent({
         await refresh();
         throw new Error(data.error);
       }
+      const entry = vocabularySchema.parse(data.entry);
+      generation.current++;
+      setEntries((rows) => [
+        entry,
+        ...rows.filter((row) => row.id !== entry.id),
+      ]);
+      setToday(dayKey());
+      setError("");
+      setLoading(false);
+      return;
     }
     await refresh();
   }
@@ -195,6 +239,12 @@ function WorkspaceContent({
         await refresh();
         throw new Error(data.error);
       }
+      generation.current++;
+      setEntries((rows) => rows.filter((row) => row.id !== id));
+      setToday(dayKey());
+      setError("");
+      setLoading(false);
+      return;
     }
     await refresh();
   }

@@ -18,12 +18,15 @@ export async function addWord(
   ports: { repository: VocabularyRepository; dictionary: DictionaryProvider },
 ): Promise<Vocabulary> {
   const word = validateWord(input);
-  if ((await ports.repository.countToday()) >= DAILY_LIMIT)
+  const [count, duplicate] = await Promise.all([
+    ports.repository.countToday(),
+    ports.repository.hasWord(word),
+  ]);
+  if (count >= DAILY_LIMIT)
     throw new Error(
       "You've reached today's two-word limit. Come back tomorrow.",
     );
-  if (await ports.repository.hasWord(word))
-    throw new Error(DUPLICATE_WORD_MESSAGE);
+  if (duplicate) throw new Error(DUPLICATE_WORD_MESSAGE);
   const entry = await ports.dictionary.lookup(word);
   return ports.repository.save(word, entry);
 }
