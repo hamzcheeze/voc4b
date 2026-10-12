@@ -22,7 +22,7 @@ export default function HistoryPage() {
     };
     rows = filterHistory(entries, filters);
   } catch (e) {
-    filterError = e instanceof Error ? e.message : "ตัวกรองไม่ถูกต้อง";
+    filterError = e instanceof Error ? e.message : "Invalid filter.";
   }
   const groups = new Map<string, Vocabulary[]>();
   for (const row of rows)
@@ -30,13 +30,15 @@ export default function HistoryPage() {
   return (
     <>
       <div className="page-heading history-heading">
-        <h1>คลังคำศัพท์</h1>
-        <span className="history-count">{entries.length} คำ</span>
+        <h1>Word library</h1>
+        <span className="history-count">
+          {entries.length} {entries.length === 1 ? "word" : "words"}
+        </span>
       </div>
       <div className="filters">
         <div>
           <label htmlFor="period" className="sr-only">
-            ช่วงเวลา
+            Time period
           </label>
           <select
             id="period"
@@ -46,20 +48,20 @@ export default function HistoryPage() {
               setValue("");
             }}
           >
-            <option value="all">ทุกช่วงเวลา</option>
-            <option value="date">เลือกวัน</option>
-            <option value="month">เลือกเดือน</option>
-            <option value="year">เลือกปี</option>
+            <option value="all">All time</option>
+            <option value="date">Choose a date</option>
+            <option value="month">Choose a month</option>
+            <option value="year">Choose a year</option>
           </select>
         </div>
         {period !== "all" && (
           <div>
             <label htmlFor="period-value">
               {period === "date"
-                ? "วันที่"
+                ? "Date"
                 : period === "month"
-                  ? "เดือน / ปี (ค.ศ.)"
-                  : "ปี (ค.ศ.)"}
+                  ? "Month / year"
+                  : "Year"}
             </label>
             <input
               id="period-value"
@@ -80,15 +82,15 @@ export default function HistoryPage() {
         )}
         <div className="sort-filter">
           <label htmlFor="order" className="sr-only">
-            เรียงลำดับ
+            Sort order
           </label>
           <select
             id="order"
             value={order}
             onChange={(e) => setOrder(e.target.value as "asc" | "desc")}
           >
-            <option value="desc">ใหม่ → เก่า</option>
-            <option value="asc">เก่า → ใหม่</option>
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
           </select>
         </div>
         {period !== "all" && (
@@ -99,18 +101,18 @@ export default function HistoryPage() {
               setValue("");
             }}
           >
-            ล้างตัวกรอง
+            Clear filters
           </button>
         )}
       </div>
       {loading ? (
         <p className="loading" role="status">
-          กำลังโหลด…
+          Loading…
         </p>
       ) : error ? (
         <div className="error" role="alert">
           {error}
-          <button onClick={() => void refresh()}>ลองใหม่</button>
+          <button onClick={() => void refresh()}>Try again</button>
         </div>
       ) : filterError ? (
         <p className="error" role="alert">
@@ -118,17 +120,19 @@ export default function HistoryPage() {
         </p>
       ) : groups.size === 0 ? (
         <div className="empty-history">
-          <p>ไม่มีคำศัพท์ในช่วงนี้</p>
+          <p>No words found for this period</p>
         </div>
       ) : (
         Array.from(groups).map(([day, words]) => (
           <section className="history-day" key={day}>
             <div className="history-day-heading">
               <h2>{dateLabel(day)}</h2>
-              <span>{words.length} คำ</span>
+              <span>
+                {words.length} {words.length === 1 ? "word" : "words"}
+              </span>
             </div>
             {words.map((entry) => (
-              <WordCard key={entry.id} entry={entry} />
+              <WordCard key={entry.id} entry={entry} headingLevel={3} />
             ))}
           </section>
         ))

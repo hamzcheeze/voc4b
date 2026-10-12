@@ -80,24 +80,24 @@ function list(): Vocabulary[] {
   try {
     return z.array(vocabularySchema).parse(JSON.parse(saved));
   } catch {
-    throw new Error("ข้อมูลเดโมในเบราว์เซอร์เสียหาย กดล้างเดโมเพื่อเริ่มใหม่");
+    throw new Error("Demo data is corrupted. Reset the demo and try again.");
   }
 }
 function save(word: string): Vocabulary {
   const rows = list(),
     today = dayKey();
   if (rows.filter((x) => x.day === today).length >= 2)
-    throw new Error("วันนี้ครบสองคำแล้ว");
+    throw new Error("You've reached today's two-word limit.");
   if (
     rows.some(
       (x) => x.day === today && x.word.toLowerCase() === word.toLowerCase(),
     )
   )
-    throw new Error("วันนี้มีคำนี้แล้ว");
+    throw new Error("This word is already saved today.");
   const entry = examples[word.toLowerCase()];
   if (!entry)
     throw new Error(
-      "เดโมมีเฉพาะ rescind, serene, thrive, deliberate, subtle และ resilient",
+      "Demo mode includes only rescind, serene, thrive, deliberate, subtle, and resilient.",
     );
   const vocabulary: Vocabulary = {
     id: crypto.randomUUID(),
@@ -109,7 +109,7 @@ function save(word: string): Vocabulary {
   try {
     localStorage.setItem(KEY, JSON.stringify([...rows, vocabulary]));
   } catch {
-    throw new Error("เบราว์เซอร์ไม่อนุญาตให้บันทึกเดโม");
+    throw new Error("Your browser blocked demo storage.");
   }
   return vocabulary;
 }

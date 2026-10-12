@@ -17,7 +17,9 @@ export async function addWord(
 ): Promise<Vocabulary> {
   const word = validateWord(input);
   if ((await ports.repository.countToday()) >= DAILY_LIMIT)
-    throw new Error("วันนี้ครบสองคำแล้ว กลับมาเพิ่มคำใหม่พรุ่งนี้นะ");
+    throw new Error(
+      "You've reached today's two-word limit. Come back tomorrow.",
+    );
   const entry = await ports.dictionary.lookup(word);
   return ports.repository.save(word, entry);
 }

@@ -105,7 +105,7 @@ it.each([
     emit(event, session("first", "new-token"));
     fireEvent.focus(window);
     expect(screen.getByRole("heading", { name: "ought" })).toBeVisible();
-    expect(screen.queryByText("กำลังโหลด…")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
@@ -125,7 +125,7 @@ it("clears the old user's words on sign out", async () => {
   expect(
     screen.queryByRole("heading", { name: "ought" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "เข้าสู่ระบบ" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 it("hides the old user's words and loads the new user's data on account change", async () => {
   mount();

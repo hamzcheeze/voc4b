@@ -77,7 +77,7 @@ export function Workspace({
     };
     client.auth.getSession().then(({ data, error }) => {
       if (active && !authEventReceived) {
-        if (error) setError("ตรวจสอบเซสชันไม่สำเร็จ");
+        if (error) setError("Couldn't verify your session.");
         updateSession(data.session);
       }
     });
@@ -114,7 +114,7 @@ export function Workspace({
       }
     } catch (e) {
       if (version === generation.current)
-        setError(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
+        setError(e instanceof Error ? e.message : "Couldn't load your words.");
     } finally {
       if (version === generation.current) setLoading(false);
     }
@@ -146,11 +146,11 @@ export function Workspace({
   async function add(word: string) {
     if (mode === "demo") await demoStore.add(word);
     else {
-      if (!client) throw new Error("ระบบยังไม่พร้อมใช้งาน");
+      if (!client) throw new Error("The app isn't ready yet.");
       const {
         data: { session: current },
       } = await client.auth.getSession();
-      if (!current) throw new Error("กรุณาเข้าสู่ระบบใหม่");
+      if (!current) throw new Error("Please sign in again.");
       const response = await fetch("/api/words", {
         method: "POST",
         headers: {
@@ -173,29 +173,29 @@ export function Workspace({
     >
       <div className="app-shell">
         <header className="masthead">
-          <Link href="/" className="brand" aria-label="voc4b · หน้าหลัก">
+          <Link href="/" className="brand" aria-label="voc4b · Home">
             <Icon name="notebook" />
             <span>voc4b</span>
           </Link>
-          <nav aria-label="เมนูหลัก">
+          <nav aria-label="Main navigation">
             <Link href="/" aria-current={path === "/" ? "page" : undefined}>
-              วันนี้
+              Today
             </Link>
             <Link
               href="/history"
               aria-current={path === "/history" ? "page" : undefined}
             >
-              คลังคำศัพท์
+              Word library
             </Link>
           </nav>
           <div className="account-tools">
             <ThemeToggle />
             {mode === "demo" && (
               <details className="mode-menu">
-                <summary title="ข้อมูลตัวอย่าง">เดโม</summary>
+                <summary title="Sample data">Demo</summary>
                 <div className="mode-popover">
-                  <p>คำตัวอย่าง · เก็บในเครื่อง</p>
-                  <p>ไม่ได้เรียก Dictionary API หรือ Supabase</p>
+                  <p>Sample words · stored on this device</p>
+                  <p>No dictionary API or Supabase connection</p>
                   <button
                     className="text-button"
                     onClick={() => {
@@ -203,7 +203,7 @@ export function Workspace({
                       void refresh();
                     }}
                   >
-                    ล้างเดโม
+                    Reset demo
                   </button>
                 </div>
               </details>
@@ -213,11 +213,11 @@ export function Workspace({
                 className="text-button"
                 onClick={() =>
                   void client.auth.signOut().then(({ error }) => {
-                    if (error) setError("ออกจากระบบไม่สำเร็จ");
+                    if (error) setError("Couldn't sign out. Please try again.");
                   })
                 }
               >
-                ออกจากระบบ
+                Sign out
               </button>
             )}
           </div>
@@ -225,12 +225,15 @@ export function Workspace({
         <main id="main-content">
           {mode === "unconfigured" ? (
             <section className="setup-panel">
-              <h1>ตั้งค่าการเชื่อมต่อ</h1>
-              <p>กรอก Supabase keys ตาม README เพื่อเริ่มใช้งาน</p>
+              <h1>Connection setup</h1>
+              <p>
+                Add your Supabase keys as described in the README to get
+                started.
+              </p>
             </section>
           ) : !authReady ? (
             <p role="status" className="loading">
-              กำลังโหลด…
+              Loading…
             </p>
           ) : mode === "live" && !session && client ? (
             <AuthPanel client={client} />
@@ -260,12 +263,14 @@ function AuthPanel({ client }: { client: SupabaseClient }) {
         : await client.auth.signInWithPassword({ email, password });
       if (result.error) throw result.error;
       if (signup && !result.data.session)
-        setMessage("สมัครแล้ว โปรดยืนยันอีเมลก่อนเข้าสู่ระบบ");
+        setMessage(
+          "Account created. Check your email to confirm it before signing in.",
+        );
     } catch {
       setError(
         signup
-          ? "สมัครไม่สำเร็จ ตรวจสอบอีเมลและรหัสผ่าน หรือลองใหม่ภายหลัง"
-          : "เข้าสู่ระบบไม่สำเร็จ ตรวจสอบรหัสผ่านและยืนยันอีเมลแล้วลองใหม่",
+          ? "Couldn't create your account. Check your email and password, then try again."
+          : "Couldn't sign in. Check your password and confirm your email, then try again.",
       );
     } finally {
       setBusy(false);
@@ -273,9 +278,9 @@ function AuthPanel({ client }: { client: SupabaseClient }) {
   }
   return (
     <section className="auth-panel">
-      <h1>เข้าสู่ระบบ</h1>
+      <h1>Sign in</h1>
       <form onSubmit={submit}>
-        <label htmlFor="email">อีเมล</label>
+        <label htmlFor="email">Email</label>
         <input
           id="email"
           type="email"
@@ -284,7 +289,7 @@ function AuthPanel({ client }: { client: SupabaseClient }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <label htmlFor="password">รหัสผ่าน</label>
+        <label htmlFor="password">Password</label>
         <input
           id="password"
           type="password"
@@ -301,7 +306,7 @@ function AuthPanel({ client }: { client: SupabaseClient }) {
         )}
         {message && <p role="status">{message}</p>}
         <button className="primary" disabled={busy}>
-          {busy ? "กำลังดำเนินการ…" : signup ? "สมัครบัญชี" : "เข้าสู่ระบบ"}
+          {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
         </button>
       </form>
       {process.env.NEXT_PUBLIC_ALLOW_SIGNUP === "true" && (
@@ -313,7 +318,9 @@ function AuthPanel({ client }: { client: SupabaseClient }) {
             setMessage("");
           }}
         >
-          {signup ? "มีบัญชีแล้ว? เข้าสู่ระบบ" : "ยังไม่มีบัญชี? สมัครฟรี"}
+          {signup
+            ? "Already have an account? Sign in"
+            : "Need an account? Sign up"}
         </button>
       )}
     </section>

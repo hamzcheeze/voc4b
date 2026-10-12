@@ -17,7 +17,7 @@ export function remainingSlots(saved: number): number {
 export function validateWord(input: string): string {
   const word = input.trim();
   if (!/^[a-zA-Z]+(?:[-'][a-zA-Z]+)*$/.test(word) || word.length > 80)
-    throw new Error("กรุณากรอกคำภาษาอังกฤษหนึ่งคำ (ไม่เกิน 80 ตัวอักษร)");
+    throw new Error("Enter one English word (up to 80 characters).");
   return word;
 }
 export const syllableSchema = z
@@ -147,11 +147,11 @@ export function filterHistory(
   filters: HistoryFilters,
 ): Vocabulary[] {
   if (filters.date && !validDate(filters.date))
-    throw new Error("วันที่ไม่ถูกต้อง");
+    throw new Error("Invalid date.");
   if (filters.month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(filters.month))
-    throw new Error("เดือนไม่ถูกต้อง");
+    throw new Error("Invalid month.");
   if (filters.year && !/^\d{4}$/.test(filters.year))
-    throw new Error("ปีไม่ถูกต้อง");
+    throw new Error("Invalid year.");
   return rows
     .filter(
       (row) =>
@@ -167,7 +167,7 @@ export function filterHistory(
     );
 }
 export function dateLabel(day: string): string {
-  return new Intl.DateTimeFormat("th-TH", {
+  return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",

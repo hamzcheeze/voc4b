@@ -17,7 +17,7 @@ function databaseError(
     error.message.includes("does not exist")
   )
     return new Error(
-      "ฐานข้อมูลยังไม่ได้อัปเดต กรุณารัน migration 002_dictionary.sql ใน Supabase SQL Editor",
+      "The database needs an update. Run migration 002_dictionary.sql in the Supabase SQL Editor.",
     );
   return new Error(fallback);
 }
@@ -40,7 +40,10 @@ export class SupabaseRepository implements VocabularyRepository {
   async countToday(): Promise<number> {
     const { data, error } = await this.client.rpc("vocabulary_today_count");
     if (error)
-      throw databaseError(error, "อ่านจำนวนคำวันนี้ไม่สำเร็จ กรุณาลองใหม่");
+      throw databaseError(
+        error,
+        "Couldn't read today's word count. Please try again.",
+      );
     return z.number().int().nonnegative().parse(data);
   }
   async save(word: string, entry: DictionaryEntry): Promise<Vocabulary> {
@@ -50,10 +53,14 @@ export class SupabaseRepository implements VocabularyRepository {
     });
     if (error) {
       if (error.message.includes("daily_limit"))
-        throw new Error("วันนี้ครบสองคำแล้ว กลับมาใหม่พรุ่งนี้นะ");
+        throw new Error(
+          "You've reached today's two-word limit. Come back tomorrow.",
+        );
       if (error.message.includes("duplicate_word"))
-        throw new Error("วันนี้บันทึกคำนี้ไปแล้ว ลองเลือกคำใหม่");
-      throw databaseError(error, "บันทึกลงฐานข้อมูลไม่สำเร็จ กรุณาลองใหม่");
+        throw new Error(
+          "This word is already saved today. Choose another word.",
+        );
+      throw databaseError(error, "Couldn't save the word. Please try again.");
     }
     return z.array(vocabularySchema).length(1).parse(data)[0];
   }
@@ -69,7 +76,10 @@ export class SupabaseRepository implements VocabularyRepository {
         .order("id")
         .range(offset, offset + 499);
       if (error)
-        throw databaseError(error, "โหลดคำศัพท์ไม่สำเร็จ กรุณาลองใหม่");
+        throw databaseError(
+          error,
+          "Couldn't load your words. Please try again.",
+        );
       result.push(...z.array(vocabularySchema).parse(data));
       if (data.length < 500) return result;
     }

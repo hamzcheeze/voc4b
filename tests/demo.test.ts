@@ -14,7 +14,7 @@ it("persists two demo words and enforces cap", async () => {
   expect(demoStore.list().filter((x) => x.day === dayKey())).toHaveLength(2);
 });
 it("unsupported demo word does not use a slot", async () => {
-  await expect(demoStore.add("gibberish")).rejects.toThrow(/เดโม/);
+  await expect(demoStore.add("gibberish")).rejects.toThrow(/Demo/);
   expect(demoStore.list().filter((x) => x.day === dayKey())).toHaveLength(0);
 });
 it("rejects duplicate demo word without consuming slot", async () => {

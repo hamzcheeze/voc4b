@@ -18,9 +18,9 @@ it.each([0, 1, 2])("shows one add control below cap, saved=%i", (n) => {
       onAdd={() => {}}
     />,
   );
-  expect(
-    screen.queryAllByRole("button", { name: /เพิ่มคำศัพท์/ }),
-  ).toHaveLength(n < 2 ? 1 : 0);
+  expect(screen.queryAllByRole("button", { name: /Add a word/ })).toHaveLength(
+    n < 2 ? 1 : 0,
+  );
   expect(screen.queryAllByRole("heading", { name: "ought" })).toHaveLength(n);
 });
 it("displays requested word, canonical phrase, US IPA and every sense/example", () => {
@@ -30,7 +30,7 @@ it("displays requested word, canonical phrase, US IPA and every sense/example", 
   expect(screen.getByText("/ɔt/")).toBeVisible();
   expect(screen.getByText("You ought to apologize.")).toBeVisible();
   expect(screen.getByText("We ought to leave now.")).toBeVisible();
-  const summary = screen.getByText("อีก 1 ความหมาย");
+  const summary = screen.getByText("1 more meaning");
   fireEvent.click(summary);
   expect(
     screen.getByText("Used to say what is likely to happen."),
@@ -75,10 +75,10 @@ it("does not render duplicate pronunciation controls", () => {
       }}
     />,
   );
-  expect(
-    screen.getAllByRole("button", { name: "ฟังเสียง ought US" }),
-  ).toHaveLength(1);
-  expect(screen.queryByText("การออกเสียงเพิ่มเติม")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Play ought US" })).toHaveLength(
+    1,
+  );
+  expect(screen.queryByText("More pronunciations")).not.toBeInTheDocument();
 });
 it("plays the API audio and stops from the same control", async () => {
   const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
@@ -86,10 +86,10 @@ it("plays the API audio and stops from the same control", async () => {
     .spyOn(HTMLMediaElement.prototype, "pause")
     .mockImplementation(() => {});
   render(<WordCard entry={vocabulary} />);
-  const button = screen.getByRole("button", { name: "ฟังเสียง ought US" });
+  const button = screen.getByRole("button", { name: "Play ought US" });
   fireEvent.click(button);
   expect(
-    await screen.findByRole("button", { name: "หยุดเสียง ought US" }),
+    await screen.findByRole("button", { name: "Stop ought US" }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(play).toHaveBeenCalledTimes(1);
   const media = play.mock.instances[0];
@@ -97,7 +97,7 @@ it("plays the API audio and stops from the same control", async () => {
     "src",
     dictionaryEntry.pronunciations[1].audioUrl,
   );
-  fireEvent.click(screen.getByRole("button", { name: "หยุดเสียง ought US" }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop ought US" }));
   expect(pause).toHaveBeenCalledTimes(1);
   expect(button).toHaveAttribute("aria-pressed", "false");
 });
@@ -116,27 +116,28 @@ it("renders historical English honestly without Thai or invented IPA", () => {
       }}
     />,
   );
-  expect(screen.getByText("ข้อมูลเดิม")).toBeVisible();
+  expect(screen.getByText("Legacy entry")).toBeVisible();
   expect(screen.getByText("To cancel a decision.")).toBeVisible();
   expect(screen.getByText("sind")).toBeVisible();
   expect(
-    screen.queryByRole("button", { name: /ฟังเสียง/ }),
+    screen.queryByRole("button", { name: /Play/ }),
   ).not.toBeInTheDocument();
 });
 
 it("reports a media error after playback starts and resets the control", async () => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   const { container } = render(<WordCard entry={vocabulary} />);
-  fireEvent.click(screen.getByRole("button", { name: "ฟังเสียง ought US" }));
+  fireEvent.click(screen.getByRole("button", { name: "Play ought US" }));
   const playing = await screen.findByRole("button", {
-    name: "หยุดเสียง ought US",
+    name: "Stop ought US",
   });
   expect(playing).toHaveAttribute("aria-pressed", "true");
   const audio = container.querySelector("audio");
   if (!audio) throw new Error("The dictionary audio control is missing.");
   fireEvent.error(audio);
-  expect(screen.getByRole("alert")).toHaveTextContent("เล่นเสียงไม่สำเร็จ");
-  expect(
-    screen.getByRole("button", { name: "ฟังเสียง ought US" }),
-  ).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByRole("alert")).toHaveTextContent("Audio playback failed.");
+  expect(screen.getByRole("button", { name: "Play ought US" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });

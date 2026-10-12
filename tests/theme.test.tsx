@@ -58,8 +58,8 @@ it("still changes appearance when browser storage is unavailable", () => {
 });
 it("the accessible control toggles both ways", () => {
   render(<ThemeToggle />);
-  fireEvent.click(screen.getByRole("button", { name: "เปลี่ยนเป็นโหมดมืด" }));
+  fireEvent.click(screen.getByRole("button", { name: "Switch to dark mode" }));
   expect(document.documentElement.dataset.theme).toBe("dark");
-  fireEvent.click(screen.getByRole("button", { name: "เปลี่ยนเป็นโหมดสว่าง" }));
+  fireEvent.click(screen.getByRole("button", { name: "Switch to light mode" }));
   expect(document.documentElement.dataset.theme).toBe("light");
 });

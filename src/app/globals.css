@@ -10,8 +10,7 @@
   --button: #202020;
   --button-ink: #ffffff;
   --body:
-    "Inter Variable", "Noto Sans Thai Variable", -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+    "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -216,11 +215,15 @@ main {
   margin: 0 auto;
   padding: 76px 32px 100px;
 }
+main:has(.page-heading) {
+  max-width: 1000px;
+  padding: 64px 40px 96px;
+}
 .page-heading {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
   gap: 24px;
 }
 h1 {
@@ -230,11 +233,19 @@ h1 {
   margin: 0;
   letter-spacing: -0.8px;
 }
+.page-heading h1 {
+  font-size: 42px;
+  line-height: 1.15;
+  letter-spacing: -1.6px;
+}
+.page-heading > div {
+  min-width: 0;
+}
 .page-heading time {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  margin-top: 10px;
+  margin-top: 12px;
 }
 .progress,
 .history-count {
@@ -249,33 +260,50 @@ h1 {
   flex-direction: column;
 }
 .word-card {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  column-gap: 48px;
+  align-items: start;
   border-top: 1px solid var(--line);
-  padding: 34px 0 36px;
+  padding: 30px 0 32px;
+}
+.word-identity,
+.word-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .word-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 6px 12px;
 }
-.word-heading h2 {
-  font-size: 36px;
-  font-weight: 450;
-  line-height: 1.2;
+.word-title {
+  font-size: 27px;
+  font-weight: 550;
+  line-height: 1.25;
   margin: 0;
-  letter-spacing: -1.3px;
+  letter-spacing: -0.75px;
   overflow-wrap: anywhere;
   min-width: 0;
 }
 .pronunciation {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin: 9px 0 24px;
+  gap: 8px;
+  margin: 8px 0 18px;
+}
+.word-identity .pronunciation {
+  margin-bottom: 0;
 }
 .pronunciation p {
   margin: 0;
-  font-size: 17px;
+  font-size: 14px;
   color: var(--muted);
   line-height: 1.6;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 .pronunciation-play {
   width: 30px;
@@ -283,12 +311,11 @@ h1 {
 }
 .canonical-headword,
 .legacy-pronunciation {
-  margin: 8px 0 12px;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 .legacy-label {
-  margin-left: 14px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -306,30 +333,30 @@ h1 {
   line-height: 1.6;
 }
 .meaning p {
-  line-height: 1.75;
-  font-size: 16px;
+  line-height: 1.7;
+  font-size: 15px;
   margin: 0;
   font-weight: 400;
 }
 .meaning .part-of-speech {
   color: var(--muted);
   font-size: 12px;
-  margin-bottom: 5px;
+  margin-bottom: 7px;
 }
 .definition + .definition {
   margin-top: 24px;
 }
 .examples {
-  margin: 12px 0 0;
-  padding-left: 18px;
+  margin: 10px 0 0;
+  padding-left: 17px;
   color: var(--muted);
   font-size: 14px;
 }
 .examples li + li {
-  margin-top: 6px;
+  margin-top: 5px;
 }
 .dictionary-details {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 .dictionary-details summary {
   cursor: pointer;
@@ -341,7 +368,7 @@ h1 {
 }
 .dictionary-source {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   margin-top: 18px;
 }
@@ -353,19 +380,24 @@ a.dictionary-source:hover {
   margin: 0;
 }
 .verb-forms dl div {
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+  gap: 16px;
 }
 .verb-forms dt {
   color: var(--muted);
-  min-width: 160px;
+  min-width: 0;
+}
+.verb-forms dt,
+.verb-forms dd {
+  overflow-wrap: anywhere;
 }
 .verb-forms dd {
   margin: 0;
 }
 .add-card {
   width: 100%;
-  min-height: 56px;
+  min-height: 54px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -375,7 +407,7 @@ a.dictionary-source:hover {
   text-align: left;
   background: transparent;
   font-size: 13px;
-  padding: 0 10px;
+  padding: 0;
   margin-top: 0;
   border-radius: 0;
   transition:
@@ -492,13 +524,17 @@ dialog input {
 .history-heading {
   margin-bottom: 28px;
 }
+.history-count {
+  padding-bottom: 5px;
+}
 .filters {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: 10px;
+  gap: 12px;
   padding-bottom: 24px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--line);
 }
 .filters > div {
   min-width: 126px;
@@ -513,12 +549,16 @@ dialog input {
   font-size: 12px;
   width: 100%;
   cursor: pointer;
-  min-height: 38px;
+  min-height: 36px;
+  padding-top: 7px;
+  padding-bottom: 7px;
   padding-right: 28px;
 }
 .filters input {
   font-size: 12px;
-  min-height: 38px;
+  min-height: 36px;
+  padding-top: 7px;
+  padding-bottom: 7px;
 }
 .filters option {
   background: var(--surface);
@@ -532,33 +572,25 @@ dialog input {
   font-size: 11px;
 }
 .history-day {
-  margin-top: 20px;
-  margin-bottom: 24px;
+  margin-top: 32px;
+  margin-bottom: 42px;
 }
 .history-day-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 0;
+  padding-bottom: 14px;
   color: var(--muted);
 }
 .history-day-heading h2 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 450;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink);
 }
 .history-day-heading span {
   font-size: 11px;
-}
-.history-day .word-card {
-  padding: 28px 0 30px;
-}
-.history-day .word-heading h2 {
-  font-size: 29px;
-  letter-spacing: -0.9px;
-}
-.history-day .pronunciation {
-  margin-bottom: 16px;
 }
 .empty-history {
   padding: 50px 0;
@@ -597,6 +629,46 @@ dialog input {
   }
   main {
     padding: 56px 28px 80px;
+  }
+  main:has(.page-heading) {
+    padding: 44px 28px 72px;
+  }
+  .word-card {
+    grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+    column-gap: 32px;
+  }
+}
+@media (max-width: 640px) {
+  main:has(.page-heading) {
+    padding: 36px 24px 64px;
+  }
+  .page-heading {
+    margin-bottom: 28px;
+    gap: 16px;
+  }
+  .page-heading h1 {
+    font-size: 34px;
+    letter-spacing: -1px;
+  }
+  .page-heading time {
+    font-size: 12px;
+    margin-top: 9px;
+  }
+  .word-card {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 20px;
+    padding: 26px 0 28px;
+  }
+  .word-title {
+    font-size: 25px;
+    letter-spacing: -0.6px;
+  }
+  .history-heading {
+    margin-bottom: 24px;
+  }
+  .history-day {
+    margin-top: 26px;
+    margin-bottom: 32px;
   }
 }
 @media (max-width: 520px) {
@@ -640,46 +712,20 @@ dialog input {
   main {
     padding: 42px 24px 60px;
   }
-  .page-heading {
-    margin-bottom: 26px;
-    gap: 14px;
-  }
   h1 {
     font-size: 27px;
-  }
-  .page-heading time {
-    font-size: 11px;
-    margin-top: 8px;
   }
   .progress,
   .history-count {
     font-size: 11px;
   }
-  .word-card {
-    padding: 28px 0 30px;
-  }
-  .word-heading h2 {
-    font-size: 33px;
-  }
-  .pronunciation {
-    margin-bottom: 20px;
-  }
-  .pronunciation p {
-    font-size: 16px;
-  }
-  .meaning p {
-    font-size: 15px;
-  }
-  .add-card {
-    min-height: 54px;
-    font-size: 13px;
-  }
   .filters {
-    gap: 9px;
+    gap: 10px;
+    padding-bottom: 22px;
   }
   .filters > div {
-    min-width: 112px;
-    flex: 1;
+    min-width: 0;
+    flex: 1 1 calc(50% - 5px);
   }
   .filters input {
     width: 100%;
@@ -691,7 +737,7 @@ dialog input {
     padding: 9px 0;
   }
   .history-day-heading h2 {
-    font-size: 11px;
+    font-size: 12px;
   }
   .mode-popover {
     width: 232px;

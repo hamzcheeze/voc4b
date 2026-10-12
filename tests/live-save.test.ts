@@ -127,7 +127,7 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
       expect(capped.status).toBe(422);
       expect(
         z.object({ error: z.string() }).parse(capped.body).error,
-      ).toContain("วันนี้ครบสองคำแล้ว");
+      ).toContain("today's two-word limit");
       const secondSaved = await request(second.token, "serene");
       expect(secondSaved.status).toBe(201);
       const secondEntry = savedSchema.parse(secondSaved.body).entry;

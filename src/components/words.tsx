@@ -6,20 +6,33 @@ import {
   type DictionaryEntry,
 } from "../domain/vocabulary";
 import { Icon } from "./icon";
-export function WordCard({ entry }: { entry: Vocabulary; index?: number }) {
+export function WordCard({
+  entry,
+  headingLevel = 2,
+}: {
+  entry: Vocabulary;
+  headingLevel?: 2 | 3;
+}) {
+  const Heading = headingLevel === 3 ? "h3" : "h2";
   const content = entry.content;
   if (content.kind === "legacy")
     return (
       <article className="word-card">
-        <div className="word-heading">
-          <h2 lang="en">{entry.word}</h2>
-          <span className="legacy-label">ข้อมูลเดิม</span>
+        <div className="word-identity">
+          <div className="word-heading">
+            <Heading className="word-title" lang="en">
+              {entry.word}
+            </Heading>
+            <span className="legacy-label">Legacy entry</span>
+          </div>
+          <p className="legacy-pronunciation" lang="en">
+            {content.syllables.map((s) => s.text).join(" · ")}
+          </p>
         </div>
-        <p className="legacy-pronunciation" lang="en">
-          {content.syllables.map((s) => s.text).join(" · ")}
-        </p>
-        <div className="meaning">
-          <p lang="en">{content.explanation}</p>
+        <div className="word-content">
+          <div className="meaning">
+            <p lang="en">{content.explanation}</p>
+          </div>
         </div>
       </article>
     );
@@ -39,62 +52,71 @@ export function WordCard({ entry }: { entry: Vocabulary; index?: number }) {
     pronunciations[0];
   return (
     <article className="word-card">
-      <div className="word-heading">
-        <h2 lang="en">{entry.word}</h2>
-      </div>
-      {dictionary.headword.toLowerCase() !== entry.word.toLowerCase() && (
-        <p className="canonical-headword" lang="en">
-          {dictionary.headword}
-        </p>
-      )}
-      {preferred && (
-        <Pronunciation word={entry.word} pronunciation={preferred} />
-      )}
-      <div className="meaning" lang="en">
-        {dictionary.definitions.slice(0, 1).map((definition) => (
-          <Sense key={definition.id} definition={definition} />
-        ))}
-        {dictionary.definitions.length > 1 && (
-          <details className="dictionary-details">
-            <summary>อีก {dictionary.definitions.length - 1} ความหมาย</summary>
-            {dictionary.definitions.slice(1).map((definition) => (
-              <Sense key={definition.id} definition={definition} />
-            ))}
-          </details>
+      <div className="word-identity">
+        <div className="word-heading">
+          <Heading className="word-title" lang="en">
+            {entry.word}
+          </Heading>
+        </div>
+        {dictionary.headword.toLowerCase() !== entry.word.toLowerCase() && (
+          <p className="canonical-headword" lang="en">
+            {dictionary.headword}
+          </p>
+        )}
+        {preferred && (
+          <Pronunciation word={entry.word} pronunciation={preferred} />
         )}
       </div>
-      {pronunciations.length > 1 && (
-        <details className="dictionary-details">
-          <summary>การออกเสียงเพิ่มเติม</summary>
-          {pronunciations
-            .filter((p) => p !== preferred)
-            .map((p, i) => (
-              <Pronunciation key={i} word={entry.word} pronunciation={p} />
-            ))}
-        </details>
-      )}
-      {dictionary.verbForms.length > 0 && (
-        <details className="dictionary-details verb-forms">
-          <summary>รูปคำกริยา</summary>
-          <dl lang="en">
-            {dictionary.verbForms.map((form) => (
-              <div key={form.id}>
-                <dt>{form.type}</dt>
-                <dd>{form.text}</dd>
-              </div>
-            ))}
-          </dl>
-          <span className="dictionary-source">Simple Wiktionary</span>
-        </details>
-      )}
-      <a
-        className="dictionary-source"
-        href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase())}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Cambridge Dictionary
-      </a>
+      <div className="word-content">
+        <div className="meaning" lang="en">
+          {dictionary.definitions.slice(0, 1).map((definition) => (
+            <Sense key={definition.id} definition={definition} />
+          ))}
+          {dictionary.definitions.length > 1 && (
+            <details className="dictionary-details">
+              <summary>
+                {dictionary.definitions.length - 1} more{" "}
+                {dictionary.definitions.length === 2 ? "meaning" : "meanings"}
+              </summary>
+              {dictionary.definitions.slice(1).map((definition) => (
+                <Sense key={definition.id} definition={definition} />
+              ))}
+            </details>
+          )}
+        </div>
+        {pronunciations.length > 1 && (
+          <details className="dictionary-details">
+            <summary>More pronunciations</summary>
+            {pronunciations
+              .filter((p) => p !== preferred)
+              .map((p, i) => (
+                <Pronunciation key={i} word={entry.word} pronunciation={p} />
+              ))}
+          </details>
+        )}
+        {dictionary.verbForms.length > 0 && (
+          <details className="dictionary-details verb-forms">
+            <summary>Verb forms</summary>
+            <dl lang="en">
+              {dictionary.verbForms.map((form) => (
+                <div key={form.id}>
+                  <dt>{form.type}</dt>
+                  <dd>{form.text}</dd>
+                </div>
+              ))}
+            </dl>
+            <span className="dictionary-source">Simple Wiktionary</span>
+          </details>
+        )}
+        <a
+          className="dictionary-source"
+          href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase())}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Cambridge Dictionary
+        </a>
+      </div>
     </article>
   );
 }
@@ -153,7 +175,7 @@ function Pronunciation({
           <button
             className="icon-button pronunciation-play"
             onClick={() => void toggle()}
-            aria-label={`${playing ? "หยุด" : "ฟัง"}เสียง ${word} ${pronunciation.region.toUpperCase()}`}
+            aria-label={`${playing ? "Stop" : "Play"} ${word} ${pronunciation.region.toUpperCase()}`}
             aria-pressed={playing}
           >
             <Icon name="volume" />
@@ -171,8 +193,8 @@ function Pronunciation({
         </>
       )}
       {error && (
-        <span role="alert" className="audio-error" lang="th">
-          เล่นเสียงไม่สำเร็จ
+        <span role="alert" className="audio-error">
+          Audio playback failed.
         </span>
       )}
     </div>
@@ -193,11 +215,11 @@ export function TodayWords({
       {remainingSlots(entries.length) > 0 ? (
         <button className="add-card" onClick={onAdd}>
           <Icon name="plus" />
-          <span>เพิ่มคำศัพท์</span>
+          <span>Add a word</span>
         </button>
       ) : (
         <div className="sr-only" role="status">
-          <span>ครบสองคำแล้ว</span>
+          <span>You've reached today's two-word limit.</span>
         </div>
       )}
     </div>

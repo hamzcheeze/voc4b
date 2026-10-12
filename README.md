@@ -1,24 +1,24 @@
 # voc4b
 
-สมุดคำศัพท์ภาษาอังกฤษวันละสองคำ Next.js ดึงความหมาย ตัวอย่าง IPA และเสียงจากหน้า Cambridge Dictionary แล้วเก็บลง Supabase รูปคำกริยามาจาก Simple Wiktionary โดยไม่มีคำแปลไทย
+A daily English vocabulary notebook. Next.js reads definitions, examples, IPA, and audio from Cambridge Dictionary, then stores them in Supabase. Verb forms come from Simple Wiktionary. The app does not provide Thai translations.
 
-## เริ่มในเครื่อง
+## Run locally
 
-ใช้ Node.js 22.19 ขึ้นไป แล้วรันคำสั่งในโฟลเดอร์โปรเจกต์
+Use Node.js 22.19 or later. From the project folder, run:
 
 ```sh
 npm ci
 npm run dev
 ```
 
-เปิด http://localhost:3000 หากยังไม่มี Supabase keys แอปใช้เดโมที่เก็บคำตัวอย่างในเบราว์เซอร์ ทดลอง `rescind` และ `serene` ได้ เดโมไม่เรียกพจนานุกรมหรือ Supabase
+Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and stores sample words in your browser. Try `rescind` or `serene`. Demo mode does not connect to a dictionary or Supabase.
 
-## เชื่อมข้อมูลจริง
+## Connect Supabase
 
-1. สำหรับฐานข้อมูลใหม่ รัน `supabase/migrations/001_vocabulary.sql` ใน Supabase SQL Editor ก่อน
-2. รัน `supabase/migrations/002_dictionary.sql` สำหรับทั้งฐานข้อมูลใหม่และฐานข้อมูลเดิม Migration นี้เก็บข้อมูลอังกฤษของวันก่อนหน้าเป็น `legacy` และเปลี่ยนการบันทึกใหม่เป็นข้อมูลพจนานุกรม
-3. สร้างผู้ใช้ที่ยืนยันอีเมลแล้วใน Supabase Authentication แล้วเข้าสู่ระบบในแอป
-4. ตั้งค่าต่อไปนี้ใน `.env.local` แล้วรีสตาร์ต Next.js
+1. For a new database, run `supabase/migrations/001_vocabulary.sql` in the Supabase SQL Editor.
+2. Run `supabase/migrations/002_dictionary.sql` on both new and existing databases. This migration preserves older English entries as `legacy` content and changes new entries to dictionary content.
+3. Create a user with a confirmed email in Supabase Authentication, then sign in to the app.
+4. Add these values to `.env.local` and restart Next.js:
 
 ```dotenv
 APP_MODE=live
@@ -27,27 +27,25 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 NEXT_PUBLIC_ALLOW_SIGNUP=false
 ```
 
-ใช้ `NEXT_PUBLIC_SUPABASE_ANON_KEY` แทน publishable key ได้
+You can use `NEXT_PUBLIC_SUPABASE_ANON_KEY` instead of the publishable key.
 
-คำที่เพิ่มต้องเป็นภาษาอังกฤษหนึ่งคำ `POST /api/words` ตรวจเซสชันของผู้ใช้ แล้วดึงหน้าเว็บพจนานุกรมผ่าน `CambridgeDictionary` ฝั่งเซิร์ฟเวอร์ Next.js ใช้ Cheerio อ่าน HTML และตรวจข้อมูลก่อนบันทึก
+Add one English word at a time. `POST /api/words` verifies the user's session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
 
-HTTP error คำที่ไม่พบ ผลลัพธ์ผิดรูปแบบ หรือคำที่ redirect ไปคนละคำจะไม่ใช้ช่องคำศัพท์ของวันนั้น หาก Simple Wiktionary ไม่พร้อมใช้งาน แอปยังบันทึกความหมายจาก Cambridge ได้โดยไม่มีรูปคำกริยา
+A failed request, missing word, malformed response, or unrelated redirect leaves today's word slots unchanged. If Simple Wiktionary is unavailable, Cambridge data can still be saved without verb forms. The app skips blank definitions and does not save an entry if no usable definitions remain.
 
-หาก scraper ส่งรายการที่ข้อความความหมายว่างมาด้วย แอปจะข้ามรายการนั้น โดยเก็บความหมายและตัวอย่างของรายการที่มีข้อความครบ ถ้าไม่เหลือความหมาย แอปจะไม่บันทึกคำ
+## Clear today's words
 
-## ล้างศัพท์ของวันนี้
+The `clear_vocabulary_today(p_expected_day)` function checks that the requested date still matches the current date in `Asia/Bangkok`, then deletes only the calling user's words for that day. The app never clears data automatically.
 
-ใช้ `clear_vocabulary_today(p_expected_day)` ผ่านเซสชันของผู้ใช้ ฟังก์ชันนี้ตรวจว่าวันที่ที่ระบุตรงกับวันปัจจุบันใน Asia/Bangkok หลังได้ lock แล้วจึงลบเฉพาะคำของผู้ใช้ที่เรียก แอปไม่ล้างข้อมูลอัตโนมัติ
-
-สคริปต์ต่อไปนี้ต้องใช้ access token ของผู้ใช้ที่เข้าสู่ระบบแล้ว และจะหยุดถ้าวันที่เปลี่ยนไป ห้ามใช้ service-role key แทน token ของผู้ใช้
+Use an access token from the signed-in user. The script stops if the date has changed. Do not use a service-role key in place of a user token.
 
 ```sh
 SUPABASE_USER_ACCESS_TOKEN=your-user-access-token node scripts/clear-today.mjs --day 2026-10-10
 ```
 
-## ใช้งานบนเซิร์ฟเวอร์
+## Deploy
 
-ตั้งค่าตัวแปร Supabase ด้านบน และตั้ง Supabase Site URL ให้ตรงกับ URL ของแอป ใช้เซิร์ฟเวอร์ Node.js ที่ติดต่อ `dictionary.cambridge.org`, `simple.wiktionary.org` และ Supabase ได้ แล้วรัน
+Set the Supabase variables above and configure the Supabase Site URL to match your app URL. Use a Node.js server that can reach `dictionary.cambridge.org`, `simple.wiktionary.org`, and Supabase. Then run:
 
 ```sh
 npm ci
@@ -55,9 +53,9 @@ npm run build
 npm start
 ```
 
-โปรเจกต์ Next.js มี logic ดึงพจนานุกรมใน `src/adapters/dictionary.ts` แล้ว สามารถลบโฟลเดอร์ `cambridge-dictionary-api` ก่อน deploy ได้ แอปไม่ต้องเปิดเซิร์ฟเวอร์พจนานุกรมแยก ดูแหล่งที่มาและใบอนุญาตใน [Third-party notices](THIRD_PARTY_NOTICES.md)
+The Next.js app contains the dictionary extraction logic in `src/adapters/dictionary.ts`. You can remove the `cambridge-dictionary-api` folder before deployment. The app does not need a separate dictionary server. See [Third-party notices](THIRD_PARTY_NOTICES.md) for attribution and license details.
 
-## ตรวจสอบโค้ด
+## Checks
 
 ```sh
 npm test
@@ -66,4 +64,4 @@ npm run lint
 npm run build
 ```
 
-[คู่มือทดสอบ](docs/TESTING.md) อธิบายการตรวจฐานข้อมูลและ browser [โครงสร้างโปรเจกต์](docs/ARCHITECTURE.md) อธิบายชนิดข้อมูลและการบันทึก
+See the [testing guide](docs/TESTING.md) for database and browser checks, and the [architecture guide](docs/ARCHITECTURE.md) for data types and storage.

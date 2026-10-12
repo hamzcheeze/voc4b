@@ -48,7 +48,7 @@ it.each(["../ought", "ought to", "https://evil.example", "คำไทย", ""])
   async (word) => {
     const fetcher = pages();
     await expect(new CambridgeDictionary().lookup(word)).rejects.toThrow(
-      /หนึ่งคำ/,
+      /one English word/,
     );
     expect(fetcher).not.toHaveBeenCalled();
   },
@@ -105,7 +105,7 @@ it.each([404, 403, 429, 500])(
       vi.fn(async () => new Response("blocked", { status })),
     );
     await expect(new CambridgeDictionary().lookup("ought")).rejects.toThrow(
-      status === 404 ? /ไม่พบคำศัพท์/ : /ไม่พร้อมใช้งาน/,
+      status === 404 ? /Word not found/ : /unavailable/,
     );
   },
 );
@@ -115,7 +115,9 @@ it("reports connection failure without caching it", async () => {
     vi.fn().mockRejectedValue(new Error("private upstream diagnostic")),
   );
   const provider = new CambridgeDictionary();
-  await expect(provider.lookup("ought")).rejects.toThrow(/ติดต่อพจนานุกรม/);
+  await expect(provider.lookup("ought")).rejects.toThrow(
+    /reach the dictionary/,
+  );
   pages();
   expect(await provider.lookup("ought")).toEqual(dictionaryEntry);
 });
@@ -175,7 +177,7 @@ it.each([
   );
   vi.stubGlobal("fetch", fetcher);
   await expect(new CambridgeDictionary().lookup("ought")).rejects.toThrow(
-    /ไม่พร้อมใช้งาน/,
+    /unavailable/,
   );
   expect(fetcher.mock.calls).toHaveLength(2);
 });
@@ -186,7 +188,7 @@ it("bounds redirect loops", async () => {
   );
   vi.stubGlobal("fetch", fetcher);
   await expect(new CambridgeDictionary().lookup("ought")).rejects.toThrow(
-    /ไม่พร้อมใช้งาน/,
+    /unavailable/,
   );
   expect(fetcher.mock.calls).toHaveLength(12);
 });
@@ -205,7 +207,7 @@ it.each([true, false])(
       ),
     );
     await expect(new CambridgeDictionary().lookup("ought")).rejects.toThrow(
-      /รูปแบบ/,
+      /invalid or incomplete data/,
     );
   },
 );
@@ -216,7 +218,7 @@ it("times out a response that sends headers but stalls its HTML body", async () 
     vi.fn(async () => new Response(new ReadableStream<Uint8Array>())),
   );
   const result = new CambridgeDictionary().lookup("ought");
-  const assertion = expect(result).rejects.toThrow(/ติดต่อพจนานุกรม/);
+  const assertion = expect(result).rejects.toThrow(/reach the dictionary/);
   await vi.advanceTimersByTimeAsync(10000);
   await assertion;
 });
@@ -239,7 +241,7 @@ it("reuses successful entries for 30 minutes and then refreshes their content", 
 it("reports malformed audio URL as a dictionary data error", async () => {
   pages(cambridge.replace("/media/english/uk_pron/ought.mp3", "http://["));
   await expect(new CambridgeDictionary().lookup("ought")).rejects.toThrow(
-    /รูปแบบ/,
+    /invalid or incomplete data/,
   );
 });
 it("evicts the oldest success after 1,000 cached words", async () => {

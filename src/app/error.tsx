@@ -2,10 +2,10 @@
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
     <section role="alert">
-      <h1>เปิดหน้านี้ไม่สำเร็จ</h1>
-      <p>ลองโหลดหน้าใหม่อีกครั้ง</p>
+      <h1>This page couldn’t load.</h1>
+      <p>Try reloading the page.</p>
       <button className="primary" onClick={reset}>
-        ลองใหม่
+        Try again
       </button>
     </section>
   );

@@ -2,90 +2,78 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /เพิ่มคำศัพท์/ })).toHaveCount(
-    1,
-  );
+  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
 });
 test("zero → one → two, persistence, history and demo reset", async ({
   page,
 }) => {
-  await expect(page.getByText("เดโม", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /เพิ่มคำศัพท์/ }).click();
-  await page.getByLabel("คำศัพท์", { exact: true }).fill("rescind");
-  await page.getByRole("button", { name: "บันทึก" }).click();
+  await expect(page.getByText("Demo", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Add a word/ }).click();
+  await page.getByLabel("Word", { exact: true }).fill("rescind");
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /เพิ่มคำศัพท์/ })).toHaveCount(
-    1,
-  );
-  await page.getByRole("button", { name: /เพิ่มคำศัพท์/ }).click();
-  await page.getByLabel("คำศัพท์", { exact: true }).fill("serene");
-  await page.getByRole("button", { name: "บันทึก" }).click();
-  await expect(page.getByRole("button", { name: /เพิ่มคำศัพท์/ })).toHaveCount(
-    0,
-  );
-  await expect(page.getByText("2 / 2 คำ")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
+  await page.getByRole("button", { name: /Add a word/ }).click();
+  await page.getByLabel("Word", { exact: true }).fill("serene");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(0);
+  await expect(page.getByText("2 / 2 words")).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /เพิ่มคำศัพท์/ })).toHaveCount(
-    0,
-  );
-  await page.getByRole("link", { name: /คลังคำศัพท์/ }).click();
+  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(0);
+  await page.getByRole("link", { name: "Word library" }).click();
   await expect(
-    page.getByRole("heading", { name: "คลังคำศัพท์" }),
+    page.getByRole("heading", { name: "Word library" }),
   ).toBeVisible();
-  await page.getByLabel("ช่วงเวลา", { exact: true }).selectOption("year");
-  await page.getByLabel("ปี (ค.ศ.)", { exact: true }).fill("1900");
-  await expect(page.getByText("ไม่มีคำศัพท์ในช่วงนี้")).toBeVisible();
-  await page.getByRole("button", { name: "ล้างตัวกรอง" }).click();
+  await page.getByLabel("Time period", { exact: true }).selectOption("year");
+  await page.getByLabel("Year", { exact: true }).fill("1900");
+  await expect(page.getByText("No words found for this period")).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("เรียงลำดับ").selectOption("asc");
+  await page.getByLabel("Sort order").selectOption("asc");
   const ascending = await page
     .locator(".history-day-heading h2")
     .allTextContents();
-  await page.getByLabel("เรียงลำดับ").selectOption("desc");
+  await page.getByLabel("Sort order").selectOption("desc");
   expect(
     await page.locator(".history-day-heading h2").allTextContents(),
   ).toEqual([...ascending].reverse());
-  await page.getByText("เดโม", { exact: true }).click();
+  await page.getByText("Demo", { exact: true }).click();
   await expect(
-    page.getByText("ไม่ได้เรียก Dictionary API หรือ Supabase"),
+    page.getByText("No dictionary API or Supabase connection"),
   ).toBeVisible();
-  await page.getByRole("button", { name: "ล้างเดโม" }).click();
-  await page.getByRole("link", { name: /วันนี้/ }).click();
-  await expect(page.getByRole("button", { name: /เพิ่มคำศัพท์/ })).toHaveCount(
-    1,
-  );
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await page.getByRole("link", { name: "Today" }).click();
+  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
 });
 test("transparent unsupported word, focus, no slot consumption", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: /เพิ่มคำศัพท์/ }).click();
-  await expect(page.getByLabel("คำศัพท์", { exact: true })).toBeFocused();
-  await page.getByLabel("คำศัพท์", { exact: true }).fill("gibberish");
-  await page.getByRole("button", { name: "บันทึก" }).click();
+  await page.getByRole("button", { name: /Add a word/ }).click();
+  await expect(page.getByLabel("Word", { exact: true })).toBeFocused();
+  await page.getByLabel("Word", { exact: true }).fill("gibberish");
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "เดโม",
+    "Demo",
   );
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /เพิ่มคำศัพท์/ }),
-  ).toBeFocused();
-  await expect(page.getByText("0 / 2 คำ")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Add a word/ })).toBeFocused();
+  await expect(page.getByText("0 / 2 words")).toBeVisible();
 });
 test("accessible desktop/mobile, IPA is visible without horizontal overflow", async ({
   page,
 }, testInfo) => {
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByRole("button", { name: /เพิ่มคำศัพท์/ }).click();
-  await page.getByLabel("คำศัพท์", { exact: true }).fill("rescind");
-  await page.getByRole("button", { name: "บันทึก" }).click();
+  await page.getByRole("button", { name: /Add a word/ }).click();
+  await page.getByLabel("Word", { exact: true }).fill("rescind");
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.locator(".pronunciation p")).toHaveText("/rɪˈsɪnd/");
   await expect(page.locator(".part-of-speech")).toHaveText("verb");
   await expect(page.locator(".meaning .thai")).toHaveCount(0);
@@ -105,16 +93,16 @@ test("accessible desktop/mobile, IPA is visible without horizontal overflow", as
 test("dark mode persists through navigation and reload, with readable monochrome content", async ({
   page,
 }, testInfo) => {
-  await page.getByRole("button", { name: "เปลี่ยนเป็นโหมดมืด" }).click();
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "เปลี่ยนเป็นโหมดสว่าง" }),
+    page.getByRole("button", { name: "Switch to light mode" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "เพิ่มคำศัพท์", exact: true }).click();
+  await page.getByRole("button", { name: "Add a word", exact: true }).click();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByLabel("คำศัพท์", { exact: true }).fill("rescind");
-  await page.getByRole("button", { name: "บันทึก" }).click();
+  await page.getByLabel("Word", { exact: true }).fill("rescind");
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.locator(".pronunciation p")).toHaveText("/rɪˈsɪnd/");
   const palette = await page
     .locator("body,.part-of-speech,.meaning p,.pronunciation p,.brand")
@@ -130,10 +118,10 @@ test("dark mode persists through navigation and reload, with readable monochrome
     path: `docs/preview-${testInfo.project.name}-dark.png`,
     fullPage: true,
   });
-  await page.getByRole("link", { name: "คลังคำศัพท์" }).click();
+  await page.getByRole("link", { name: "Word library" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByRole("button", { name: "เปลี่ยนเป็นโหมดสว่าง" }).click();
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -146,7 +134,7 @@ test("follows the system appearance until a preference is chosen", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await page.getByRole("button", { name: "เปลี่ยนเป็นโหมดมืด" }).click();
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
   await page.emulateMedia({ colorScheme: "dark" });
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

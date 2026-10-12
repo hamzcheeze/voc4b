@@ -2,8 +2,8 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <section>
-      <h1>ไม่พบหน้านี้</h1>
-      <Link href="/">กลับไปสองคำของวันนี้</Link>
+      <h1>Page not found.</h1>
+      <Link href="/">Back to today’s words</Link>
     </section>
   );
 }

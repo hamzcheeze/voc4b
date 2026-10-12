@@ -32,7 +32,7 @@ export default function TodayPage() {
       setOpen(false);
       setWord("");
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "เพิ่มคำไม่สำเร็จ");
+      setSaveError(e instanceof Error ? e.message : "Could not add the word.");
     } finally {
       setBusy(false);
     }
@@ -41,24 +41,24 @@ export default function TodayPage() {
     <>
       <div className="page-heading">
         <div>
-          <h1>วันนี้</h1>
+          <h1>Today</h1>
           <time dateTime={today}>{dateLabel(today)}</time>
         </div>
         <div
           className="progress"
-          aria-label={`บันทึกแล้ว ${words.length} จาก 2 คำ`}
+          aria-label={`${words.length} of 2 words saved`}
         >
-          <span>{words.length} / 2 คำ</span>
+          <span>{words.length} / 2 words</span>
         </div>
       </div>
       {loading ? (
         <p className="loading" role="status">
-          กำลังโหลด…
+          Loading…
         </p>
       ) : error ? (
         <div className="error" role="alert">
           {error}
-          <button onClick={() => void refresh()}>ลองใหม่</button>
+          <button onClick={() => void refresh()}>Try again</button>
         </div>
       ) : (
         <TodayWords
@@ -82,11 +82,11 @@ export default function TodayPage() {
       >
         <form onSubmit={submit}>
           <div className="dialog-heading">
-            <h2 id="add-title">เพิ่มคำศัพท์</h2>
+            <h2 id="add-title">Add a word</h2>
             <button
               type="button"
               className="icon-button"
-              aria-label="ปิด"
+              aria-label="Close"
               onClick={close}
               disabled={busy}
             >
@@ -94,7 +94,7 @@ export default function TodayPage() {
             </button>
           </div>
           <label htmlFor="new-word" className="sr-only">
-            คำศัพท์
+            Word
           </label>
           <input
             id="new-word"
@@ -110,7 +110,7 @@ export default function TodayPage() {
             disabled={busy}
           />
           {mode === "demo" && (
-            <p className="input-hint">คำตัวอย่าง: rescind, serene, thrive</p>
+            <p className="input-hint">Try: rescind, serene, thrive</p>
           )}
           {saveError && (
             <div role="alert" className="error">
@@ -118,7 +118,7 @@ export default function TodayPage() {
             </div>
           )}
           <button className="primary" disabled={busy || !word.trim()}>
-            {busy ? "กำลังบันทึก…" : "บันทึก"}
+            {busy ? "Saving…" : "Save"}
             {!busy && <Icon name="arrow" />}
           </button>
         </form>

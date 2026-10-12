@@ -15,11 +15,13 @@ const CACHE_TTL = 30 * 60 * 1000;
 const CACHE_LIMIT = 1000;
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-const UNAVAILABLE = "พจนานุกรมไม่พร้อมใช้งาน ยังไม่ได้บันทึกคำนี้";
-const CONNECTION_FAILED = "ติดต่อพจนานุกรมไม่สำเร็จ กรุณาลองใหม่ภายหลัง";
+const UNAVAILABLE = "The dictionary is unavailable. This word wasn't saved.";
+const CONNECTION_FAILED =
+  "Couldn't reach the dictionary. Please try again later.";
 const INVALID_DATA =
-  "พจนานุกรมส่งข้อมูลไม่ครบหรือรูปแบบไม่ถูกต้อง ยังไม่ได้บันทึกคำนี้";
-const WRONG_HEADWORD = "พจนานุกรมส่งคำอื่นกลับมา กรุณาตรวจสอบการสะกด";
+  "The dictionary returned invalid or incomplete data. This word wasn't saved.";
+const WRONG_HEADWORD =
+  "The dictionary returned a different word. Check the spelling.";
 
 type VerbForms = DictionaryEntry["verbForms"];
 
@@ -63,7 +65,7 @@ async function fetchHtml(url: URL): Promise<string> {
         await response.body?.cancel();
         throw new DictionaryFetchError(
           response.status === 404
-            ? "ไม่พบคำศัพท์นี้ กรุณาตรวจสอบการสะกด"
+            ? "Word not found. Check the spelling."
             : UNAVAILABLE,
         );
       }
