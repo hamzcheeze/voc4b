@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   dayKey,
+  DUPLICATE_WORD_MESSAGE,
   validateWord,
   vocabularySchema,
   type Vocabulary,
@@ -88,12 +89,8 @@ function save(word: string): Vocabulary {
     today = dayKey();
   if (rows.filter((x) => x.day === today).length >= 2)
     throw new Error("You've reached today's two-word limit.");
-  if (
-    rows.some(
-      (x) => x.day === today && x.word.toLowerCase() === word.toLowerCase(),
-    )
-  )
-    throw new Error("This word is already saved today.");
+  if (rows.some((x) => x.word.toLowerCase() === word.toLowerCase()))
+    throw new Error(DUPLICATE_WORD_MESSAGE);
   const entry = examples[word.toLowerCase()];
   if (!entry)
     throw new Error(

@@ -25,9 +25,9 @@ test("zero → one → two, persistence, history and demo reset", async ({
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(0);
-  await page.getByRole("link", { name: "Word library" }).click();
+  await page.getByRole("link", { name: "History" }).click();
   await expect(
-    page.getByRole("heading", { name: "Word library" }),
+    page.getByRole("heading", { name: "History" }),
   ).toBeVisible();
   await page.getByLabel("Time period", { exact: true }).selectOption("year");
   await page.getByLabel("Year", { exact: true }).fill("1900");
@@ -118,7 +118,7 @@ test("dark mode persists through navigation and reload, with readable monochrome
     path: `docs/preview-${testInfo.project.name}-dark.png`,
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Word library" }).click();
+  await page.getByRole("link", { name: "History" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Switch to light mode" }).click();

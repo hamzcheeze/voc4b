@@ -3,6 +3,7 @@ import type { VocabularyRepository } from "../application/add-word";
 import { z } from "zod";
 import {
   vocabularySchema,
+  DUPLICATE_WORD_MESSAGE,
   type DictionaryEntry,
   type Vocabulary,
 } from "../domain/vocabulary";
@@ -46,6 +47,19 @@ export class SupabaseRepository implements VocabularyRepository {
       );
     return z.number().int().nonnegative().parse(data);
   }
+  async hasWord(word: string): Promise<boolean> {
+    const { data, error } = await this.client
+      .from("vocabulary")
+      .select("id")
+      .ilike("word", word)
+      .limit(1);
+    if (error)
+      throw databaseError(
+        error,
+        "Couldn't check your saved words. Please try again.",
+      );
+    return data.length > 0;
+  }
   async save(word: string, entry: DictionaryEntry): Promise<Vocabulary> {
     const { data, error } = await this.client.rpc("save_vocabulary", {
       p_word: word,
@@ -57,9 +71,7 @@ export class SupabaseRepository implements VocabularyRepository {
           "You've reached today's two-word limit. Come back tomorrow.",
         );
       if (error.message.includes("duplicate_word"))
-        throw new Error(
-          "This word is already saved today. Choose another word.",
-        );
+        throw new Error(DUPLICATE_WORD_MESSAGE);
       throw databaseError(error, "Couldn't save the word. Please try again.");
     }
     return z.array(vocabularySchema).length(1).parse(data)[0];

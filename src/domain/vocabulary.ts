@@ -1,6 +1,8 @@
 import { z } from "zod";
 export const TIME_ZONE = "Asia/Bangkok";
 export const DAILY_LIMIT = 2;
+export const DUPLICATE_WORD_MESSAGE =
+  "This word is already in your library. Choose a new word.";
 export function dayKey(date = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: TIME_ZONE,

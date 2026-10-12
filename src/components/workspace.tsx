@@ -185,7 +185,7 @@ export function Workspace({
               href="/history"
               aria-current={path === "/history" ? "page" : undefined}
             >
-              Word library
+              History
             </Link>
           </nav>
           <div className="account-tools">

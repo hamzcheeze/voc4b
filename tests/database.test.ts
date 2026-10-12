@@ -9,6 +9,10 @@ const migration = readFileSync(
   "supabase/migrations/002_dictionary.sql",
   "utf8",
 );
+const repeatMigration = readFileSync(
+  "supabase/migrations/003_unique_words.sql",
+  "utf8",
+);
 const legacySyllables = [{ text: "awt", stressed: true }];
 
 function entry(headword = "ought to") {
@@ -61,6 +65,8 @@ beforeAll(async () => {
   db = await bootstrap();
   await db.exec(migration);
   await db.exec(migration);
+  await db.exec(repeatMigration);
+  await db.exec(repeatMigration);
 }, 30000);
 
 afterEach(async () => {
@@ -159,9 +165,46 @@ it("can rerun the migration without changing dictionary content", async () => {
   await db.exec("reset role");
   await db.exec(migration);
   await db.exec(migration);
+  await db.exec(repeatMigration);
+  await db.exec(repeatMigration);
   expect((await db.query("select * from public.vocabulary")).rows).toEqual(
     saved.rows,
   );
+});
+
+it("installs repeat protection without deleting existing historical duplicates", async () => {
+  const oldDb = await bootstrap();
+  try {
+    await oldDb.exec(migration);
+    for (const daysAgo of [1, 2]) {
+      await oldDb.query(
+        "insert into public.vocabulary(user_id,day,slot,word,content) values($1,(clock_timestamp() at time zone 'Asia/Bangkok')::date - $2::integer,1,$3,$4::jsonb)",
+        [
+          alice,
+          daysAgo,
+          "ought",
+          JSON.stringify({ kind: "dictionary", entry: entry("ought") }),
+        ],
+      );
+    }
+    await oldDb.exec(repeatMigration);
+    await oldDb.exec(repeatMigration);
+    expect(
+      (await oldDb.query("select word from public.vocabulary")).rows,
+    ).toEqual([{ word: "ought" }, { word: "ought" }]);
+    await oldDb.exec("set role authenticated");
+    await oldDb.query("select set_config('request.jwt.claim.sub',$1,false)", [
+      alice,
+    ]);
+    await expect(
+      oldDb.query("select * from public.save_vocabulary($1,$2::jsonb)", [
+        "ought",
+        JSON.stringify(entry("ought")),
+      ]),
+    ).rejects.toThrow(/duplicate_word/);
+  } finally {
+    await oldDb.close();
+  }
 });
 
 it("stores English meanings, examples and pronunciation unchanged with the canonical headword", async () => {
@@ -245,6 +288,20 @@ it("rejects duplicates without consuming a slot and enforces the two-word quota"
   expect((await db.query("select * from public.vocabulary")).rows).toHaveLength(
     2,
   );
+});
+
+it("rejects a word from an earlier day while leaving today's slots open", async () => {
+  await seedHistory(alice, "ought");
+  await asUser(alice);
+  await expect(save(" OUGHT ", entry("ought"))).rejects.toThrow(
+    /duplicate_word/,
+  );
+  expect(
+    (await db.query("select public.vocabulary_today_count() as count")).rows,
+  ).toEqual([{ count: 0 }]);
+  await save("rescind");
+  await asUser(bob);
+  expect((await save("ought")).rows).toHaveLength(1);
 });
 
 it("RLS isolates users and each user has a separate quota", async () => {

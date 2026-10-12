@@ -17,8 +17,9 @@ Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and
 
 1. For a new database, run `supabase/migrations/001_vocabulary.sql` in the Supabase SQL Editor.
 2. Run `supabase/migrations/002_dictionary.sql` on both new and existing databases. This migration preserves older English entries as `legacy` content and changes new entries to dictionary content.
-3. Create a user with a confirmed email in Supabase Authentication, then sign in to the app.
-4. Add these values to `.env.local` and restart Next.js:
+3. Run `supabase/migrations/003_unique_words.sql` to prevent saving a word already in your library on any earlier day. Existing entries are preserved.
+4. Create a user with a confirmed email in Supabase Authentication, then sign in to the app.
+5. Add these values to `.env.local` and restart Next.js:
 
 ```dotenv
 APP_MODE=live

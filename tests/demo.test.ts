@@ -22,3 +22,9 @@ it("rejects duplicate demo word without consuming slot", async () => {
   await expect(demoStore.add("Rescind")).rejects.toThrow();
   expect(demoStore.list().filter((x) => x.day === dayKey())).toHaveLength(1);
 });
+it("rejects a word from the history samples without consuming a slot", async () => {
+  await expect(demoStore.add("Deliberate")).rejects.toThrow(
+    "already in your library",
+  );
+  expect(demoStore.list().filter((x) => x.day === dayKey())).toHaveLength(0);
+});

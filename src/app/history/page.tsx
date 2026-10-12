@@ -30,7 +30,7 @@ export default function HistoryPage() {
   return (
     <>
       <div className="page-heading history-heading">
-        <h1>Word library</h1>
+        <h1>History</h1>
         <span className="history-count">
           {entries.length} {entries.length === 1 ? "word" : "words"}
         </span>

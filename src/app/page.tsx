@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "../components/workspace";
 import { TodayWords } from "../components/words";
 import { Icon } from "../components/icon";
-import { dateLabel } from "../domain/vocabulary";
+import { dateLabel, DUPLICATE_WORD_MESSAGE } from "../domain/vocabulary";
 export default function TodayPage() {
   const { entries, loading, error, today, refresh, add, mode } = useWorkspace();
   const [open, setOpen] = useState(false),
@@ -28,6 +28,12 @@ export default function TodayPage() {
     setBusy(true);
     setSaveError("");
     try {
+      if (
+        entries.some(
+          (entry) => entry.word.toLowerCase() === word.trim().toLowerCase(),
+        )
+      )
+        throw new Error(DUPLICATE_WORD_MESSAGE);
       await add(word);
       setOpen(false);
       setWord("");
@@ -110,7 +116,7 @@ export default function TodayPage() {
             disabled={busy}
           />
           {mode === "demo" && (
-            <p className="input-hint">Try: rescind, serene, thrive</p>
+            <p className="input-hint">Try: rescind or serene</p>
           )}
           {saveError && (
             <div role="alert" className="error">
