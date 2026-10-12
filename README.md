@@ -4,11 +4,11 @@ A daily English vocabulary notebook. Next.js reads definitions, examples, IPA, a
 
 ## Run locally
 
-Use Node.js 22.19 or later. From the project folder, run:
+Install Bun 1.4.3 or later. Keep Node.js 22.19 or later available for Vitest and Playwright tooling. The app uses Bun for development, builds, and production. From the project folder, run:
 
 ```sh
-npm ci
-npm run dev
+bun install --frozen-lockfile
+bun run dev
 ```
 
 Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and stores sample words in your browser. Try `rescind` or `serene`. Demo mode does not connect to a dictionary or Supabase.
@@ -35,7 +35,7 @@ AUTH_FACEBOOK_ID=your-facebook-app-id
 AUTH_FACEBOOK_SECRET=your-facebook-app-secret
 ```
 
-Generate `AUTH_SECRET` with `npx auth secret`. Keep this value and `SUPABASE_SECRET_KEY` private. Do not prefix them with `NEXT_PUBLIC_`. The browser does not need a Supabase key. See [.env.example](.env.example) for all settings.
+Generate `AUTH_SECRET` with `bun -e 'console.log(require("node:crypto").randomBytes(32).toString("base64"))'`. Keep this value and `SUPABASE_SECRET_KEY` private. Do not prefix them with `NEXT_PUBLIC_`. The browser does not need a Supabase key. See [.env.example](.env.example) for all settings.
 
 Existing `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` values work as aliases for the Google settings above.
 
@@ -65,17 +65,17 @@ A failed request, missing word, malformed response, or unrelated redirect leaves
 The app never clears data automatically. The optional script removes today's words through the same authenticated API used by the UI. Copy the signed-in browser's NextAuth session cookie into `AUTH_SESSION_COOKIE` in your local shell. The script requires the explicit current Bangkok date and stops if that date changes. Keep the cookie private.
 
 ```sh
-AUTH_SESSION_COOKIE='authjs.session-token=your-session-token' node scripts/clear-today.mjs --day 2026-10-12
+AUTH_SESSION_COOKIE='authjs.session-token=your-session-token' bun scripts/clear-today.mjs --day 2026-10-12
 ```
 
 ## Deploy
 
-Set the server secrets above, `AUTH_URL` to your HTTPS origin, and `AUTH_TRUST_HOST=true` only behind a trusted host or proxy. Register each enabled provider's production callback at `/api/auth/callback/{provider}`. Use a Node.js server that can reach the configured providers, `dictionary.cambridge.org`, `simple.wiktionary.org`, and Supabase. Then run:
+Set the server secrets above, `AUTH_URL` to your HTTPS origin, and `AUTH_TRUST_HOST=true` only behind a trusted host or proxy. Register each enabled provider's production callback at `/api/auth/callback/{provider}`. Use a server with Bun installed that can reach the configured providers, `dictionary.cambridge.org`, `simple.wiktionary.org`, and Supabase. Then run:
 
 ```sh
-npm ci
-npm run build
-npm start
+bun install --frozen-lockfile
+bun run build
+bun run start
 ```
 
 The Next.js app contains the dictionary extraction logic in `src/adapters/dictionary.ts`. You can remove the `cambridge-dictionary-api` folder before deployment. The app does not need a separate dictionary server. See [Third-party notices](THIRD_PARTY_NOTICES.md) for attribution and license details.
@@ -83,10 +83,10 @@ The Next.js app contains the dictionary extraction logic in `src/adapters/dictio
 ## Checks
 
 ```sh
-npm test
-npm run typecheck
-npm run lint
-npm run build
+bun run test
+bun run typecheck
+bun run lint
+bun run build
 ```
 
 See the [testing guide](docs/TESTING.md) for database and browser checks, and the [architecture guide](docs/ARCHITECTURE.md) for data types and storage.

@@ -1,12 +1,12 @@
 # Verify dictionary storage
 
-Run the local checks.
+Install dependencies with `bun install --frozen-lockfile`, then run the local checks. Keep Node.js 22.19 or later available for Vitest and Playwright. `bun run test` runs Vitest through the package script.
 
 ```sh
-npm test
-npm run typecheck
-npm run lint
-npm run build
+bun run test
+bun run typecheck
+bun run lint
+bun run build
 ```
 
 `dictionary.test.ts` serves local HTML fixtures through a mocked fetch and checks the resulting entry against literal expected data. It covers nonblank senses and their examples, blank derived-word definitions, pronunciation variants, verb forms, translation omission, unrelated headwords, unsafe audio URLs, and upstream failures. The fixtures test the Next.js parser without running the reference clone.
@@ -21,7 +21,7 @@ Use an empty disposable PostgreSQL database. This script creates test users and 
 
 ```sh
 psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/postgres-bootstrap.sql -f supabase/migrations/001_vocabulary.sql -f supabase/migrations/002_dictionary.sql -f supabase/migrations/003_unique_words.sql -f supabase/migrations/004_remove_today_word.sql -f supabase/migrations/005_nextauth.sql
-TEST_DATABASE_URL="$TEST_DATABASE_URL" node scripts/test-concurrency.mjs
+TEST_DATABASE_URL="$TEST_DATABASE_URL" bun scripts/test-concurrency.mjs
 ```
 
 Eight simultaneous connections must produce two saved entries and six `daily_limit` errors.
@@ -31,7 +31,7 @@ Eight simultaneous connections must produce two saved entries and six `daily_lim
 The optional live test fetches Cambridge and Simple Wiktionary through `CambridgeDictionary`. It never saves vocabulary and needs no local dictionary service.
 
 ```sh
-RUN_LIVE_CHECK=1 npx vitest run tests/live-connection.test.ts
+RUN_LIVE_CHECK=1 bun run test -- tests/live-connection.test.ts
 ```
 
 ## Verify real Supabase writes
@@ -39,7 +39,7 @@ RUN_LIVE_CHECK=1 npx vitest run tests/live-connection.test.ts
 Run the live Next.js app, apply migrations through 005, expose `next_auth`, and set `SUPABASE_SECRET_KEY` and `AUTH_SECRET` in `.env.local`.
 
 ```sh
-RUN_LIVE_WRITE_CHECK=1 npx vitest run tests/live-save.test.ts
+RUN_LIVE_WRITE_CHECK=1 bun run test -- tests/live-save.test.ts
 ```
 
 This opt-in check creates temporary NextAuth users and database sessions through the server key. It exercises the cookie-authenticated words API, compares stored data with `CambridgeDictionary.lookup()`, and checks isolation and the daily cap. Cleanup deletes only the temporary users from this run and their vocabulary. It does not prove a Google, Facebook, or ChatGPT consent flow. Set `LIVE_APP_URL` if the local app uses a different port.
@@ -57,7 +57,7 @@ For deployment acceptance, build a copy of the Next.js app without the nested `c
 Run the app in explicit demo mode for the notebook browser suite. If port 3000 already hosts a live notebook, use an isolated copy and port instead of changing its session.
 
 ```sh
-APP_MODE=demo npm run test:e2e
+APP_MODE=demo bun run test:e2e
 ```
 
 The browser suite covers two-word additions, reload persistence, history filtering, keyboard focus, provider-free demo errors, mobile overflow, accessibility, theme persistence, and IPA display. The demo cannot verify live Supabase writes or remote audio playback.
