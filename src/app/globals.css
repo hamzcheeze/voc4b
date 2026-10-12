@@ -438,35 +438,52 @@ a.dictionary-source:hover {
 .verb-forms dd {
   margin: 0;
 }
-.add-card {
+.add-word-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.add-word-form input {
+  grid-column: 1;
+  grid-row: 1;
   width: 100%;
-  min-height: 54px;
-  display: flex;
+  min-width: 0;
+  min-height: 46px;
+  font-size: 16px;
+  border-radius: 8px;
+}
+.add-word-form .add-card {
+  min-width: 140px;
+  grid-column: 2;
+  grid-row: 1;
+}
+.add-word-form .error,
+.add-word-form .input-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.add-card {
+  width: fit-content;
+  min-height: 46px;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
-  text-align: left;
-  background: transparent;
-  font-size: 13px;
-  padding: 0;
-  margin-top: 0;
-  border-radius: 0;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  color: var(--button-ink);
+  background: var(--button);
+  font-size: 14px;
+  font-weight: 550;
+  padding: 0 18px;
+  border-radius: 8px;
+}
+.add-card:disabled {
+  opacity: 1;
+  cursor: default;
 }
 .add-card > svg {
   width: 18px;
   height: 18px;
-}
-.add-card:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.add-card:active {
-  background: var(--hover);
 }
 dialog {
   color: var(--ink);
@@ -714,6 +731,23 @@ dialog input {
   .page-heading time {
     font-size: 12px;
     margin-top: 9px;
+  }
+  .add-card {
+    width: 100%;
+    min-height: 48px;
+  }
+  .add-word-form {
+    grid-template-columns: minmax(0, 1fr);
+    margin-bottom: 22px;
+  }
+  .add-word-form input {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 48px;
+  }
+  .add-word-form .add-card {
+    grid-column: 1;
+    grid-row: 2;
   }
   .word-card {
     grid-template-columns: minmax(0, 1fr);

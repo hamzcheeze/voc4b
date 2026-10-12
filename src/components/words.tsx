@@ -226,15 +226,18 @@ function Pronunciation({
 }
 export function TodayWords({
   entries,
-  onAdd,
   onRemove,
 }: {
   entries: Vocabulary[];
-  onAdd: () => void;
   onRemove: (entry: Vocabulary) => void;
 }) {
   return (
     <div className="word-list">
+      {remainingSlots(entries.length) === 0 && (
+        <div className="sr-only" role="status">
+          <span>You've reached today's two-word limit.</span>
+        </div>
+      )}
       {entries.map((entry) => (
         <WordCard
           key={entry.id}
@@ -242,16 +245,6 @@ export function TodayWords({
           onRemove={() => onRemove(entry)}
         />
       ))}
-      {remainingSlots(entries.length) > 0 ? (
-        <button className="add-card" onClick={onAdd}>
-          <Icon name="plus" />
-          <span>Add a word</span>
-        </button>
-      ) : (
-        <div className="sr-only" role="status">
-          <span>You've reached today's two-word limit.</span>
-        </div>
-      )}
     </div>
   );
 }

@@ -12,7 +12,11 @@ import "@testing-library/jest-dom/vitest";
 import { AuthPanel } from "../src/components/auth-panel";
 import { Workspace } from "../src/components/workspace";
 import { vocabulary } from "./fixtures/dictionary";
-import { dayKey } from "../src/domain/vocabulary";
+import {
+  dayKey,
+  DUPLICATE_WORD_MESSAGE,
+  type Vocabulary,
+} from "../src/domain/vocabulary";
 const mocks = vi.hoisted(() => ({ signOut: vi.fn(), startSignIn: vi.fn() }));
 const authState = vi.hoisted(() => ({ authenticated: true }));
 vi.mock("../src/application/auth-actions", () => ({
@@ -34,7 +38,7 @@ vi.mock("next-auth/react", () => ({
 const providers = [
   { id: "google", name: "Google", enabled: true },
 ] satisfies Parameters<typeof Workspace>[0]["providers"];
-function mount() {
+function mount(entries: Vocabulary[] = [{ ...vocabulary, day: dayKey() }]) {
   return render(
     <Workspace
       mode="live"
@@ -44,7 +48,7 @@ function mount() {
         kind: "loaded",
         userId: "first",
         today: dayKey(),
-        entries: [{ ...vocabulary, day: dayKey() }],
+        entries,
       }}
     >
       <span />
@@ -171,7 +175,6 @@ it("never reports a failed revocation as a completed logout and permits retry", 
 });
 it("warms a paused valid input without saving it", async () => {
   mount();
-  fireEvent.click(screen.getByRole("button", { name: "Add a word" }));
   fireEvent.change(screen.getByRole("textbox", { name: "Word" }), {
     target: { value: "serene" },
   });
@@ -185,4 +188,71 @@ it("warms a paused valid input without saving it", async () => {
   );
   expect(screen.queryByRole("heading", { name: "serene" })).toBeNull();
   expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it("shows the inline form immediately and rejects an existing word without a request", async () => {
+  mount();
+  const input = screen.getByRole("textbox", { name: "Word" });
+  expect(input).not.toHaveFocus();
+  expect(screen.getByRole("button", { name: "Add a word" })).toBeDisabled();
+  fireEvent.change(input, { target: { value: "  OUGHT  " } });
+  fireEvent.submit(screen.getByRole("form", { name: "Add a word" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    DUPLICATE_WORD_MESSAGE,
+  );
+  expect(input).toHaveValue("  OUGHT  ");
+  expect(fetch).not.toHaveBeenCalled();
+});
+it("saves from the inline form once, keeps controls disabled while pending, then clears the input", async () => {
+  const pending = Promise.withResolvers<Response>();
+  vi.mocked(fetch).mockReturnValue(pending.promise);
+  mount([]);
+  const input = screen.getByRole("textbox", { name: "Word" });
+  const form = screen.getByRole("form", { name: "Add a word" });
+  fireEvent.change(input, { target: { value: "serene" } });
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  expect(input).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/words",
+    expect.objectContaining({ method: "POST", body: '{"word":"serene"}' }),
+  );
+  await act(async () =>
+    pending.resolve(
+      new Response(
+        JSON.stringify({
+          entry: { ...vocabulary, id: "new", word: "serene", day: dayKey() },
+        }),
+        { status: 201 },
+      ),
+    ),
+  );
+  expect(screen.getByRole("heading", { name: "serene" })).toBeVisible();
+  expect(input).toHaveValue("");
+  expect(input).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Add a word" })).toBeDisabled();
+});
+it("keeps a failed word in the inline input for correction", async () => {
+  vi.mocked(fetch).mockImplementation(async (_url, options) =>
+    options?.method === "POST"
+      ? new Response(JSON.stringify({ error: "Word not found." }), {
+          status: 404,
+        })
+      : new Response(
+          JSON.stringify({ entries: [{ ...vocabulary, day: dayKey() }] }),
+        ),
+  );
+  mount();
+  const input = screen.getByRole("textbox", { name: "Word" });
+  fireEvent.change(input, { target: { value: "unknownword" } });
+  fireEvent.submit(screen.getByRole("form", { name: "Add a word" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Word not found.");
+  expect(input).toHaveValue("unknownword");
+  expect(input).toBeEnabled();
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  fireEvent.change(input, { target: { value: "serene" } });
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(input).toHaveAttribute("aria-invalid", "false");
 });

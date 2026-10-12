@@ -109,7 +109,6 @@ try {
     await page.goto(base.href, { waitUntil: "domcontentloaded" });
     const homeMs = await page.evaluate(() => globalThis.__perfHome);
     await page.getByRole("heading", { name: "ought", exact: true }).waitFor();
-    await page.getByRole("button", { name: "Add a word", exact: true }).click();
     await page.getByRole("textbox", { name: "Word" }).fill(word);
     const beforeSave = requests.length;
     const postResponse = page.waitForResponse(
@@ -127,9 +126,8 @@ try {
         const observer = new globalThis.MutationObserver(() => {
           if (
             started !== undefined &&
-            !globalThis.document.querySelector(
-              'dialog[aria-labelledby="add-title"]',
-            ).open &&
+            (!globalThis.document.querySelector("#new-word") ||
+              globalThis.document.querySelector("#new-word").value === "") &&
             [...globalThis.document.querySelectorAll(".word-title")].some(
               (node) => node.textContent === word,
             )
@@ -155,14 +153,14 @@ try {
         );
       });
     }, word);
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("button", { name: "Add a word", exact: true }).click();
     const response = await postResponse;
     const body = await response.json();
     if (response.status() !== 201)
       throw new Error(`Save failed (${response.status()}): ${body.error}`);
     await page.getByRole("heading", { name: word, exact: true }).waitFor();
     await page
-      .getByRole("dialog", { name: "Add a word" })
+      .getByRole("textbox", { name: "Word" })
       .waitFor({ state: "hidden" });
     const addMs = await page.evaluate(() => globalThis.__perfAdd);
     const row = await admin

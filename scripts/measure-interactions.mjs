@@ -118,9 +118,6 @@ try {
         .waitFor();
       await page.locator('nav a[href="/"]').click();
       await page.getByRole("heading", { name: "Today", exact: true }).waitFor();
-      await page
-        .getByRole("button", { name: "Add a word", exact: true })
-        .click();
       await page.getByRole("textbox", { name: "Word" }).fill(word);
       await page.waitForTimeout(1600);
       const saveResponse = page.waitForResponse(
@@ -138,9 +135,8 @@ try {
           const observer = new globalThis.MutationObserver(() => {
             if (
               started !== undefined &&
-              !globalThis.document.querySelector(
-                'dialog[aria-labelledby="add-title"]',
-              ).open &&
+              (!globalThis.document.querySelector("#new-word") ||
+                globalThis.document.querySelector("#new-word").value === "") &&
               [...globalThis.document.querySelectorAll(".word-title")].some(
                 (n) => n.textContent === word,
               )
@@ -166,7 +162,9 @@ try {
           );
         });
       }, word);
-      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Add a word", exact: true })
+        .click();
       const saved = await saveResponse;
       if (saved.status() !== 201)
         throw new Error(`Save failed ${saved.status()}`);

@@ -8,27 +8,27 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-it.each([0, 1, 2])("shows one add control below cap, saved=%i", (n) => {
-  render(
-    <TodayWords
-      entries={Array.from({ length: n }, (_, i) => ({
-        ...vocabulary,
-        id: String(i),
-      }))}
-      onAdd={() => {}}
-      onRemove={() => {}}
-    />,
-  );
-  expect(screen.queryAllByRole("button", { name: /Add a word/ })).toHaveLength(
-    n < 2 ? 1 : 0,
-  );
-  expect(screen.queryAllByRole("heading", { name: "ought" })).toHaveLength(n);
-});
+it.each([0, 1, 2])(
+  "shows saved cards and keeps adding owned by the Today form, saved=%i",
+  (n) => {
+    render(
+      <TodayWords
+        entries={Array.from({ length: n }, (_, i) => ({
+          ...vocabulary,
+          id: String(i),
+        }))}
+        onRemove={() => {}}
+      />,
+    );
+    expect(
+      screen.queryAllByRole("button", { name: /Add a word/ }),
+    ).toHaveLength(0);
+    expect(screen.queryAllByRole("heading", { name: "ought" })).toHaveLength(n);
+  },
+);
 it("offers per-word removal on Today without a removal action in history", () => {
   const onRemove = vi.fn();
-  render(
-    <TodayWords entries={[vocabulary]} onAdd={() => {}} onRemove={onRemove} />,
-  );
+  render(<TodayWords entries={[vocabulary]} onRemove={onRemove} />);
   fireEvent.click(screen.getByRole("button", { name: "Remove ought" }));
   expect(onRemove).toHaveBeenCalledWith(vocabulary);
   cleanup();

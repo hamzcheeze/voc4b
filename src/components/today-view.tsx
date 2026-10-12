@@ -12,28 +12,24 @@ import {
 export default function TodayView() {
   const { entries, loading, error, today, refresh, add, remove, mode } =
     useWorkspace();
-  const [open, setOpen] = useState(false),
-    [word, setWord] = useState(""),
-    [busy, setBusy] = useState(false),
-    [saveError, setSaveError] = useState(""),
-    [removeTarget, setRemoveTarget] = useState<Vocabulary | null>(null),
+  const [word, setWord] = useState("");
+  const [submission, setSubmission] = useState<
+    { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string }
+  >({ kind: "idle" });
+  const busy = submission.kind === "saving";
+  const [removeTarget, setRemoveTarget] = useState<Vocabulary | null>(null),
     [removeBusy, setRemoveBusy] = useState(false),
     [removeError, setRemoveError] = useState("");
-  const dialog = useRef<HTMLDialogElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const saving = useRef(false);
   const removeDialog = useRef<HTMLDialogElement>(null);
-  const addButton = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    if (open) dialog.current?.showModal();
-    else if (dialog.current?.open) dialog.current.close();
-  }, [open]);
   useEffect(() => {
     if (removeTarget) removeDialog.current?.showModal();
     else if (removeDialog.current?.open) removeDialog.current.close();
   }, [removeTarget]);
   const words = entries.filter((x) => x.day === today);
   useEffect(() => {
-    if (mode !== "live" || !open || busy || loading || words.length >= 2)
-      return;
+    if (mode !== "live" || busy || loading || words.length >= 2) return;
     let candidate: string;
     try {
       candidate = validateWord(word).toLowerCase();
@@ -53,31 +49,31 @@ export default function TodayView() {
       }).catch(() => {});
     }, 650);
     return () => clearTimeout(timer);
-  }, [mode, open, busy, loading, word, entries, words.length]);
-  function close() {
-    if (busy) return;
-    setOpen(false);
-    setSaveError("");
-    addButton.current?.focus();
-  }
+  }, [mode, busy, loading, word, entries, words.length]);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    setBusy(true);
-    setSaveError("");
+    if (saving.current || loading || words.length >= 2 || !word.trim()) return;
+    saving.current = true;
+    setSubmission({ kind: "saving" });
     try {
+      const candidate = validateWord(word);
       if (
         entries.some(
-          (entry) => entry.word.toLowerCase() === word.trim().toLowerCase(),
+          (entry) => entry.word.toLowerCase() === candidate.toLowerCase(),
         )
       )
         throw new Error(DUPLICATE_WORD_MESSAGE);
-      await add(word);
-      setOpen(false);
+      await add(candidate);
       setWord("");
+      setSubmission({ kind: "idle" });
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Could not add the word.");
+      setSubmission({
+        kind: "error",
+        message: e instanceof Error ? e.message : "Could not add the word.",
+      });
     } finally {
-      setBusy(false);
+      saving.current = false;
+      requestAnimationFrame(() => input.current?.focus());
     }
   }
   function closeRemove() {
@@ -92,9 +88,7 @@ export default function TodayView() {
     try {
       await remove(removeTarget.id);
       setRemoveTarget(null);
-      requestAnimationFrame(() =>
-        document.querySelector<HTMLButtonElement>(".add-card")?.focus(),
-      );
+      requestAnimationFrame(() => input.current?.focus());
     } catch (e) {
       setRemoveError(
         e instanceof Error ? e.message : "Could not remove the word.",
@@ -127,69 +121,61 @@ export default function TodayView() {
           <button onClick={() => void refresh()}>Try again</button>
         </div>
       ) : (
-        <TodayWords
-          entries={words}
-          onAdd={() => {
-            addButton.current = document.activeElement as HTMLElement;
-            setOpen(true);
-          }}
-          onRemove={(entry) => setRemoveTarget(entry)}
-        />
-      )}
-      <dialog
-        ref={dialog}
-        onCancel={(event) => {
-          event.preventDefault();
-          close();
-        }}
-        onClose={() => {
-          if (!busy) setOpen(false);
-        }}
-        aria-labelledby="add-title"
-      >
-        <form onSubmit={submit}>
-          <div className="dialog-heading">
-            <h2 id="add-title">Add a word</h2>
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Close"
-              onClick={close}
-              disabled={busy}
+        <>
+          {words.length < 2 && (
+            <form
+              className="add-word-form"
+              aria-label="Add"
+              onSubmit={submit}
             >
-              <Icon name="close" />
-            </button>
-          </div>
-          <label htmlFor="new-word" className="sr-only">
-            Word
-          </label>
-          <input
-            id="new-word"
-            lang="en"
-            autoFocus
-            autoComplete="off"
-            spellCheck={false}
-            placeholder=""
-            value={word}
-            onChange={(e) => setWord(e.target.value)}
-            maxLength={80}
-            required
-            disabled={busy}
+              <label htmlFor="new-word" className="sr-only">
+                Word
+              </label>
+              <input
+                ref={input}
+                id="new-word"
+                lang="en"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Enter a word"
+                value={word}
+                onChange={(event) => {
+                  setWord(event.target.value);
+                  if (submission.kind === "error")
+                    setSubmission({ kind: "idle" });
+                }}
+                maxLength={80}
+                required
+                disabled={busy}
+                aria-invalid={submission.kind === "error"}
+                aria-describedby={
+                  submission.kind === "error" ? "add-word-error" : undefined
+                }
+              />
+              <button
+                type="submit"
+                className="add-card"
+                disabled={busy || !word.trim()}
+              >
+                {!busy && <Icon name="plus" />}
+                <span>{busy ? "Saving…" : "Add a word"}</span>
+              </button>
+              {mode === "demo" && (
+                <p className="input-hint">Try: rescind, serene, lucid</p>
+              )}
+              {submission.kind === "error" && (
+                <p id="add-word-error" role="alert" className="error">
+                  {submission.message}
+                </p>
+              )}
+            </form>
+          )}
+          <TodayWords
+            entries={words}
+            onRemove={(entry) => setRemoveTarget(entry)}
           />
-          {mode === "demo" && (
-            <p className="input-hint">Try: rescind, serene, lucid</p>
-          )}
-          {saveError && (
-            <div role="alert" className="error">
-              {saveError}
-            </div>
-          )}
-          <button className="primary" disabled={busy || !word.trim()}>
-            {busy ? "Saving…" : "Save"}
-            {!busy && <Icon name="arrow" />}
-          </button>
-        </form>
-      </dialog>
+        </>
+      )}
       <dialog
         ref={removeDialog}
         className="remove-dialog"
