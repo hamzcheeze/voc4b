@@ -203,56 +203,58 @@ function WorkspaceContent({
       value={{ entries, loading, error, mode, today, refresh, add, remove }}
     >
       <div className="app-shell">
-        <header className="masthead">
-          <Link href="/" className="brand" aria-label="voc4b · Home">
-            <Icon name="notebook" />
-            <span>voc4b</span>
-          </Link>
-          <nav aria-label="Main navigation">
-            <Link href="/" aria-current={path === "/" ? "page" : undefined}>
-              Today
+        {(mode === "demo" || (mode === "live" && authReady && session)) && (
+          <header className="masthead">
+            <Link href="/" className="brand" aria-label="voc4b · Home">
+              <Icon name="notebook" />
+              <span>voc4b</span>
             </Link>
-            <Link
-              href="/history"
-              aria-current={path === "/history" ? "page" : undefined}
-            >
-              History
-            </Link>
-          </nav>
-          <div className="account-tools">
-            <ThemeToggle />
-            {mode === "demo" && (
-              <details className="mode-menu">
-                <summary title="Sample data">Demo</summary>
-                <div className="mode-popover">
-                  <p>Sample words · stored on this device</p>
-                  <p>No dictionary API or Supabase connection</p>
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      demoStore.reset();
-                      void refresh();
-                    }}
-                  >
-                    Reset demo
-                  </button>
-                </div>
-              </details>
-            )}
-            {mode === "live" && session && (
-              <button
-                className="text-button"
-                onClick={() =>
-                  void signOut({ redirect: false }).catch(() =>
-                    setError("Couldn't sign out. Please try again."),
-                  )
-                }
+            <nav aria-label="Main navigation">
+              <Link href="/" aria-current={path === "/" ? "page" : undefined}>
+                Today
+              </Link>
+              <Link
+                href="/history"
+                aria-current={path === "/history" ? "page" : undefined}
               >
-                Sign out
-              </button>
-            )}
-          </div>
-        </header>
+                History
+              </Link>
+            </nav>
+            <div className="account-tools">
+              <ThemeToggle />
+              {mode === "demo" && (
+                <details className="mode-menu">
+                  <summary title="Sample data">Demo</summary>
+                  <div className="mode-popover">
+                    <p>Sample words · stored on this device</p>
+                    <p>No dictionary API or Supabase connection</p>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        demoStore.reset();
+                        void refresh();
+                      }}
+                    >
+                      Reset demo
+                    </button>
+                  </div>
+                </details>
+              )}
+              {mode === "live" && session && (
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    void signOut({ redirect: false }).catch(() =>
+                      setError("Couldn't sign out. Please try again."),
+                    )
+                  }
+                >
+                  Sign out
+                </button>
+              )}
+            </div>
+          </header>
+        )}
         <main id="main-content">
           {mode === "unconfigured" ? (
             <section className="setup-panel">
