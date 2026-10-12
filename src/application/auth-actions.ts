@@ -12,5 +12,11 @@ export async function startSignIn(input: string) {
     )
   )
     throw new Error("This sign-in provider is unavailable.");
-  await signIn(provider, { redirectTo: "/" });
+  const destination: unknown = await signIn(provider, {
+    redirectTo: "/",
+    redirect: false,
+  });
+  if (typeof destination !== "string" || !destination)
+    throw new Error("Sign-in did not return a destination.");
+  return destination;
 }

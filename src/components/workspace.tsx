@@ -334,24 +334,22 @@ function WorkspaceContent({
             <p role="status" className="loading">
               Loading…
             </p>
-          ) : mode === "live" && (!session || logout !== "idle") ? (
-            <>
-              <AuthPanel
-                providers={providers}
-                disabled={logout === "pending" || logout === "failed"}
-              />
-              {logout === "pending" && (
-                <p className="auth-error" role="status">
-                  Signing out…
-                </p>
-              )}
+          ) : mode === "live" && logout !== "idle" ? (
+            <section className="auth-panel oauth-panel auth-progress">
               {logout === "failed" && (
-                <p className="error auth-error" role="alert">
-                  Couldn't sign out. Your session is still active.
-                  <button onClick={() => void leave()}>Try again</button>
-                </p>
+                <>
+                  <p className="error" role="alert">
+                    Couldn't sign out. Your session is still active.
+                  </p>
+                  <button className="text-button" onClick={() => void leave()}>
+                    Try again
+                  </button>
+                </>
               )}
-            </>
+              {logout !== "failed" && <p role="status">Signing out…</p>}
+            </section>
+          ) : mode === "live" && !session ? (
+            <AuthPanel providers={providers} />
           ) : (
             <>
               {path === "/" ? (

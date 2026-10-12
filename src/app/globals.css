@@ -869,6 +869,13 @@ dialog input {
   margin-top: 20px;
   font-size: 14px;
 }
+.auth-progress {
+  text-align: center;
+  font-size: 14px;
+}
+.auth-progress [role="status"] {
+  color: var(--muted);
+}
 .sr-only {
   position: absolute;
   width: 1px;

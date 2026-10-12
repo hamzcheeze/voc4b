@@ -84,12 +84,23 @@ export function AuthPanel({
     setBusy(provider);
     setError("");
     startTransition(async () => {
+      let destination: URL;
       try {
-        await startSignIn(provider);
+        destination = new URL(
+          await startSignIn(provider),
+          window.location.href,
+        );
+        if (
+          destination.origin !== window.location.origin &&
+          destination.protocol !== "https:"
+        )
+          throw new Error("Sign-in returned an unsafe destination.");
       } catch {
         setBusy(null);
         setError("Couldn't start sign-in. Please try again.");
+        return;
       }
+      window.location.assign(destination.href);
     });
   }
   return (
