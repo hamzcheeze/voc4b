@@ -118,6 +118,16 @@ summary:focus-visible {
   width: 21px;
   height: 21px;
 }
+.auth-title-brand {
+  display: inline-block;
+  border: 1px solid var(--button);
+  border-radius: 0.2em;
+  background: var(--button);
+  color: var(--button-ink);
+  padding: 0.02em 0.2em 0.06em;
+  line-height: 1.4;
+  letter-spacing: inherit;
+}
 nav {
   display: flex;
   gap: 6px;

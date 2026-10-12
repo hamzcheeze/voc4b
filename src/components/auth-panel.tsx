@@ -85,7 +85,9 @@ export function AuthPanel({ providers }: { providers: AuthProviderOption[] }) {
   }
   return (
     <section className="auth-panel oauth-panel">
-      <h1>Log in to Voc4b</h1>
+      <h1>
+        Log in to <span className="auth-title-brand">Voc4b</span>
+      </h1>
       <div className="oauth-buttons">
         {providers.map((provider) => (
           <div key={provider.id}>
