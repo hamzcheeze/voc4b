@@ -205,9 +205,9 @@ function WorkspaceContent({
       <div className="app-shell">
         {(mode === "demo" || (mode === "live" && authReady && session)) && (
           <header className="masthead">
-            <Link href="/" className="brand" aria-label="voc4b · Home">
+            <Link href="/" className="brand" aria-label="Voc4b · Home">
               <Icon name="notebook" />
-              <span>voc4b</span>
+              <span className="wordmark">Voc4b</span>
             </Link>
             <nav aria-label="Main navigation">
               <Link href="/" aria-current={path === "/" ? "page" : undefined}>

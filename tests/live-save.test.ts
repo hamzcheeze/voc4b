@@ -35,7 +35,7 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
         throw new Error("Adapter not ready.");
       const created = await adapter.createUser({
         id: randomUUID(),
-        email: `voc4b-check-${randomUUID()}@example.com`,
+        email: `Voc4b-check-${randomUUID()}@example.com`,
         emailVerified: null,
         name: "Temporary verification account",
       });

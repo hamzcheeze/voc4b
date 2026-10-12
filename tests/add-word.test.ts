@@ -41,7 +41,7 @@ it("does not consume a slot on provider failure", async () => {
 });
 it("validates before network calls", async () => {
   const p = ports();
-  await expect(addWord("voc4b", p)).rejects.toThrow();
+  await expect(addWord("Voc4b", p)).rejects.toThrow();
   expect(p.repository.countToday).not.toHaveBeenCalled();
 });
 it("propagates atomic cap rejection after a concurrent winner", async () => {

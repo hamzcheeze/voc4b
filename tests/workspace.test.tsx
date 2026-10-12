@@ -116,7 +116,7 @@ it("shows login immediately for a server-confirmed absent session", () => {
   authentication.session = null;
   mount();
   expect(
-    screen.getByRole("heading", { name: "Log in to Voc4b" }),
+    screen.getByRole("heading", { name: "Sign in to Voc4b" }),
   ).toBeVisible();
   expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
   expect(
@@ -137,7 +137,7 @@ it("clears the previous user's words on signout", async () => {
     screen.queryByRole("heading", { name: "ought" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole("heading", { name: "Log in to Voc4b" }),
+    screen.getByRole("heading", { name: "Sign in to Voc4b" }),
   ).toBeVisible();
 });
 it("hides previous words and loads the new owner's words on account change", async () => {

@@ -4,10 +4,11 @@ import type { Metadata } from "next";
 import { appMode } from "../application/config";
 import { Workspace } from "../components/workspace";
 import "@fontsource-variable/inter";
+import "@fontsource/pacifico/latin-400.css";
 import { THEME_BOOTSTRAP } from "../components/theme-script";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "voc4b",
+  title: "Voc4b",
   description:
     "Learn two English words each day with pronunciation and clear definitions.",
 };

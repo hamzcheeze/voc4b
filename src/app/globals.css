@@ -118,6 +118,11 @@ summary:focus-visible {
   width: 21px;
   height: 21px;
 }
+.wordmark {
+  font-family: "Pacifico", cursive;
+  font-weight: 400;
+  letter-spacing: normal;
+}
 .auth-title-brand {
   display: inline-block;
   border: 1px solid var(--button);
@@ -826,7 +831,7 @@ dialog input {
   text-align: center;
   font-size: clamp(28px, 4vw, 36px);
   letter-spacing: -0.04em;
-  margin: 0 0 30px;
+  margin: 0 0 48px;
 }
 .oauth-buttons {
   display: grid;
