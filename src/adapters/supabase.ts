@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { VocabularyRepository } from "../application/add-word";
 import { z } from "zod";
@@ -22,13 +23,8 @@ function databaseError(
     );
   return new Error(fallback);
 }
-export function userClient(
-  url: string,
-  key: string,
-  token: string,
-): SupabaseClient {
+export function serviceClient(url: string, key: string): SupabaseClient {
   return createClient(url, key, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -37,9 +33,14 @@ export function userClient(
   });
 }
 export class SupabaseRepository implements VocabularyRepository {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly userId: string,
+  ) {}
   async countToday(): Promise<number> {
-    const { data, error } = await this.client.rpc("vocabulary_today_count");
+    const { data, error } = await this.client.rpc("vocabulary_today_count", {
+      p_user_id: this.userId,
+    });
     if (error)
       throw databaseError(
         error,
@@ -51,6 +52,7 @@ export class SupabaseRepository implements VocabularyRepository {
     const { data, error } = await this.client
       .from("vocabulary")
       .select("id")
+      .eq("user_id", this.userId)
       .ilike("word", word)
       .limit(1);
     if (error)
@@ -62,6 +64,7 @@ export class SupabaseRepository implements VocabularyRepository {
   }
   async save(word: string, entry: DictionaryEntry): Promise<Vocabulary> {
     const { data, error } = await this.client.rpc("save_vocabulary", {
+      p_user_id: this.userId,
       p_word: word,
       p_entry: entry,
     });
@@ -78,6 +81,7 @@ export class SupabaseRepository implements VocabularyRepository {
   }
   async removeToday(id: string): Promise<boolean> {
     const { data, error } = await this.client.rpc("delete_vocabulary_today", {
+      p_user_id: this.userId,
       p_id: id,
     });
     if (error)
@@ -91,6 +95,7 @@ export class SupabaseRepository implements VocabularyRepository {
       const { data, error } = await this.client
         .from("vocabulary")
         .select("id,word,day,created_at,content")
+        .eq("user_id", this.userId)
         .order("day", { ascending: false })
         .order("created_at", { ascending: false })
         .order("id")

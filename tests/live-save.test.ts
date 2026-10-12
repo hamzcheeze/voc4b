@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
+import { SupabaseAdapter } from "@auth/supabase-adapter";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { CambridgeDictionary } from "../src/adapters/dictionary";
@@ -15,13 +16,6 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
     vi.stubEnv("NODE_ENV", "development");
     nextEnv.loadEnvConfig(process.cwd(), true, { info() {}, error() {} });
     const url = z.url().parse(process.env.NEXT_PUBLIC_SUPABASE_URL);
-    const publicKey = z
-      .string()
-      .min(1)
-      .parse(
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      );
     const secretKey = z.string().min(1).parse(process.env.SUPABASE_SECRET_KEY);
     const base = new URL(process.env.LIVE_APP_URL || "http://localhost:3000");
     if (!["localhost", "127.0.0.1"].includes(base.hostname))
@@ -35,35 +29,30 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
     };
     const admin = createClient(url, secretKey, options);
     const createdIds: string[] = [];
-    const run = randomUUID();
+    const adapter = SupabaseAdapter({ url, secret: secretKey });
     async function account() {
-      const email = `voc4b-check-${randomUUID()}@example.com`;
-      const password = randomBytes(32).toString("base64url");
-      const created = await admin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        app_metadata: { verification_run: run },
+      if (!adapter.createUser || !adapter.createSession)
+        throw new Error("Adapter not ready.");
+      const created = await adapter.createUser({
+        id: randomUUID(),
+        email: `voc4b-check-${randomUUID()}@example.com`,
+        emailVerified: null,
+        name: "Temporary verification account",
       });
-      if (created.error || !created.data.user)
-        throw new Error("Could not create the temporary verification account.");
-      const id = created.data.user.id;
-      createdIds.push(id);
-      const client = createClient(url, publicKey, options);
-      const signedIn = await client.auth.signInWithPassword({
-        email,
-        password,
+      createdIds.push(created.id);
+      const token = randomUUID();
+      await adapter.createSession({
+        sessionToken: token,
+        userId: created.id,
+        expires: new Date(Date.now() + 86400000),
       });
-      if (signedIn.error || !signedIn.data.session)
-        throw new Error("Temporary account sign-in failed.");
-      expect(signedIn.data.user?.id).toBe(id);
-      return { id, client, token: signedIn.data.session.access_token };
+      return { id: created.id, token };
     }
     async function request(token: string, word?: string) {
       const response = await fetch(new URL("/api/words", base), {
         method: word ? "POST" : "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Cookie: `authjs.session-token=${token}`,
           Origin: base.origin,
           "Content-Type": "application/json",
         },
@@ -79,6 +68,22 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
     try {
       const first = await account();
       const second = await account();
+      const renewed = await fetch(new URL("/api/auth/session", base), {
+        headers: { Cookie: `authjs.session-token=${first.token}` },
+      });
+      expect(
+        renewed.headers
+          .getSetCookie()
+          .some(
+            (cookie) =>
+              cookie.startsWith("authjs.session-token=") &&
+              cookie.includes("Expires="),
+          ),
+      ).toBe(true);
+      const persistedSession = await adapter.getSessionAndUser?.(first.token);
+      expect(persistedSession?.session.expires.getTime()).toBeGreaterThan(
+        Date.now() + 399 * 86400000,
+      );
       const before = await request(first.token);
       expect(before.status).toBe(200);
       expect(listSchema.parse(before.body).entries).toEqual([]);
@@ -133,21 +138,39 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
       const secondEntry = savedSchema.parse(secondSaved.body).entry;
       expect(secondEntry.word).toBe("serene");
 
-      const rejectedClear = await first.client.rpc("clear_vocabulary_today", {
-        p_expected_day: "2000-01-01",
+      const removed = await fetch(new URL(`/api/words?id=${entry.id}`, base), {
+        method: "DELETE",
+        headers: {
+          Cookie: `authjs.session-token=${first.token}`,
+          Origin: base.origin,
+        },
       });
-      expect(rejectedClear.error?.message).toContain("calendar_day_changed");
-      const stillSaved = await request(first.token);
-      expect(listSchema.parse(stillSaved.body).entries).toHaveLength(2);
-      const cleared = await first.client.rpc("clear_vocabulary_today", {
-        p_expected_day: entry.day,
+      expect(removed.status).toBe(204);
+      expect((await request(first.token, "ought")).status).toBe(201);
+      const csrfResponse = await fetch(new URL("/api/auth/csrf", base));
+      const csrf = z
+        .object({ csrfToken: z.string() })
+        .parse(await csrfResponse.json());
+      const csrfCookie = csrfResponse.headers
+        .getSetCookie()
+        .map((cookie) => cookie.split(";")[0])
+        .join("; ");
+      const signout = await fetch(new URL("/api/auth/signout", base), {
+        method: "POST",
+        redirect: "manual",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Cookie: `${csrfCookie}; authjs.session-token=${first.token}`,
+          Origin: base.origin,
+        },
+        body: new URLSearchParams({
+          csrfToken: csrf.csrfToken,
+          callbackUrl: base.origin,
+        }),
       });
-      if (cleared.error)
-        throw new Error("Temporary vocabulary cleanup failed.");
-      expect(cleared.data).toBe(2);
-      const after = await request(first.token);
-      expect(after.status).toBe(200);
-      expect(listSchema.parse(after.body).entries).toEqual([]);
+      expect(signout.status).toBe(302);
+      expect((await request(first.token)).status).toBe(401);
+      expect(await adapter.getSessionAndUser?.(first.token)).toBeNull();
       const secondAfter = await request(second.token);
       expect(secondAfter.status).toBe(200);
       expect(listSchema.parse(secondAfter.body).entries).toEqual([secondEntry]);
@@ -156,20 +179,8 @@ it.skipIf(process.env.RUN_LIVE_WRITE_CHECK !== "1")(
     } finally {
       for (const id of createdIds) {
         try {
-          const found = await admin.auth.admin.getUserById(id);
-          if (
-            found.error ||
-            found.data.user?.app_metadata.verification_run !== run
-          ) {
-            failures.push(
-              new Error(
-                "Verification account ownership could not be confirmed.",
-              ),
-            );
-            continue;
-          }
-          const deleted = await admin.auth.admin.deleteUser(id);
-          if (deleted.error)
+          await adapter.deleteUser?.(id);
+          if (await adapter.getUser?.(id))
             failures.push(new Error("Temporary account cleanup failed."));
         } catch {
           failures.push(

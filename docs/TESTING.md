@@ -13,14 +13,14 @@ npm run build
 
 `add-word.test.ts` checks lookup before save, the early daily cap, and no save after a provider failure. UI tests check US pronunciation, UK fallback, audio controls, additional senses, and honest legacy display.
 
-`database.test.ts` runs the production migrations on PGlite PostgreSQL. It checks legacy history, migration reruns, nested JSON validation, authentication, RLS, daily limits, direct-write denial, and caller-scoped current-day deletion. PGlite does not prove simultaneous connections.
+`database.test.ts` checks the historical migrations with Supabase Auth identities. The NextAuth database tests run migration 005 on PGlite PostgreSQL and check owner preservation, service-only permissions, daily limits, duplicate words, and current-day deletion. PGlite does not prove simultaneous connections.
 
 ## Test separate database connections
 
 Use an empty disposable PostgreSQL database. This script creates test users and writes test vocabulary.
 
 ```sh
-psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/postgres-bootstrap.sql -f supabase/migrations/001_vocabulary.sql -f supabase/migrations/002_dictionary.sql
+psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/postgres-bootstrap.sql -f supabase/migrations/001_vocabulary.sql -f supabase/migrations/002_dictionary.sql -f supabase/migrations/003_unique_words.sql -f supabase/migrations/004_remove_today_word.sql -f supabase/migrations/005_nextauth.sql
 TEST_DATABASE_URL="$TEST_DATABASE_URL" node scripts/test-concurrency.mjs
 ```
 
@@ -36,13 +36,19 @@ RUN_LIVE_CHECK=1 npx vitest run tests/live-connection.test.ts
 
 ## Verify real Supabase writes
 
-Run the live Next.js app, apply migration 002, and set `SUPABASE_SECRET_KEY` in `.env.local`.
+Run the live Next.js app, apply migrations through 005, expose `next_auth`, and set `SUPABASE_SECRET_KEY` and `AUTH_SECRET` in `.env.local`.
 
 ```sh
 RUN_LIVE_WRITE_CHECK=1 npx vitest run tests/live-save.test.ts
 ```
 
-This opt-in check creates two confirmed temporary accounts without sending email. It signs in with the public key, adds words through `POST /api/words`, compares Supabase data with `CambridgeDictionary.lookup()`, and checks user isolation and the daily cap. Cleanup deletes only the accounts created by this run and their vocabulary. It does not sign in as an existing user. Set `LIVE_APP_URL` if the local app uses a different port.
+This opt-in check creates temporary NextAuth users and database sessions through the server key. It exercises the cookie-authenticated words API, compares stored data with `CambridgeDictionary.lookup()`, and checks isolation and the daily cap. Cleanup deletes only the temporary users from this run and their vocabulary. It does not prove a Google, Facebook, or ChatGPT consent flow. Set `LIVE_APP_URL` if the local app uses a different port.
+
+## Verify OAuth sign-in
+
+Configure Google credentials and its exact callback URL. From a signed-out browser, click **Continue with Google** and finish consent. Confirm that an imported account keeps its vocabulary. Sign out, sign in again, and confirm that the user ID is unchanged. Open the site in a second browser to check that accounts have separate vocabulary. Signing out must remove the database session so its old cookie cannot access `/api/words`.
+
+Google and Facebook tests need registered OAuth applications. ChatGPT needs an issued OpenAI OAuth client. A local fake provider can test callback mechanics, but it cannot establish real provider readiness. Missing provider credentials leave that provider's button disabled.
 
 For deployment acceptance, build a copy of the Next.js app without the nested `cambridge-dictionary-api` folder. Start that build and run the live write check against its `LIVE_APP_URL`. A successful check proves that the app fetches dictionary data and saves it without the reference clone or its server.
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useSyncExternalStore } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -9,54 +9,59 @@ import {
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import type { Session } from "next-auth";
 import { Workspace, useWorkspace } from "../src/components/workspace";
 import TodayPage from "../src/app/page";
 import { vocabulary } from "./fixtures/dictionary";
 import { dayKey } from "../src/domain/vocabulary";
-const auth = vi.hoisted(() => ({
-  listeners: new Set<
-    (event: AuthChangeEvent, session: Session | null) => void
-  >(),
-  getSession: vi.fn(),
-  unsubscribe: vi.fn(),
+const authentication = vi.hoisted(() => ({
+  session: null as Session | null,
+  listeners: new Set<() => void>(),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
 }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: () => ({
-    auth: {
-      getSession: auth.getSession,
-      onAuthStateChange: (
-        listener: (event: AuthChangeEvent, session: Session | null) => void,
-      ) => {
-        auth.listeners.add(listener);
-        return { data: { subscription: { unsubscribe: auth.unsubscribe } } };
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
+vi.mock("next-auth/react", () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSession: () => {
+    const data = useSyncExternalStore(
+      (listener) => {
+        authentication.listeners.add(listener);
+        return () => authentication.listeners.delete(listener);
       },
-    },
-  }),
+      () => authentication.session,
+    );
+    return { data, status: data ? "authenticated" : "unauthenticated" };
+  },
+  signIn: authentication.signIn,
+  signOut: authentication.signOut,
+  getSession: vi.fn(),
 }));
-function session(id = "first", token = "initial-token"): Session {
+function session(id = "first"): Session {
   return {
-    access_token: token,
-    refresh_token: "refresh-token",
-    expires_in: 3600,
-    token_type: "bearer",
-    user: {
-      id,
-      app_metadata: {},
-      user_metadata: {},
-      aud: "authenticated",
-      created_at: "2026-10-11T00:00:00Z",
-    },
+    expires: "2027-10-11T00:00:00Z",
+    user: { id, email: "user@gmail.com" },
   };
 }
 function Controls() {
   const { refresh } = useWorkspace();
   return <button onClick={() => void refresh()}>Refresh test data</button>;
 }
+const providers = [
+  { id: "google", name: "Google", enabled: true },
+  { id: "facebook", name: "Facebook", enabled: false },
+  { id: "chatgpt", name: "ChatGPT", enabled: false },
+] satisfies Parameters<typeof Workspace>[0]["providers"];
 function mount() {
   return render(
-    <Workspace mode="live">
+    <Workspace
+      mode="live"
+      session={authentication.session}
+      providers={providers}
+    >
       <TodayPage />
       <Controls />
     </Workspace>,
@@ -64,11 +69,7 @@ function mount() {
 }
 const saved = { ...vocabulary, day: dayKey() };
 beforeEach(() => {
-  auth.listeners.clear();
-  auth.getSession.mockResolvedValue({
-    data: { session: session() },
-    error: null,
-  });
+  authentication.session = session();
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({
@@ -87,47 +88,59 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
-function emit(event: AuthChangeEvent, value: Session | null) {
-  if (!auth.listeners.size) throw new Error("Auth listener missing");
-  act(() => auth.listeners.forEach((listener) => listener(event, value)));
+function emit(value: Session | null) {
+  act(() => {
+    authentication.session = value;
+    authentication.listeners.forEach((listener) => listener());
+  });
 }
-it.each([
-  "SIGNED_IN",
-  "TOKEN_REFRESHED",
-  "USER_UPDATED",
-] satisfies AuthChangeEvent[])(
-  "keeps words visible without fetching again on same-user %s",
-  async (event) => {
-    mount();
-    expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
-    const fetcher = vi.mocked(fetch);
-    const requests = fetcher.mock.calls.length;
-    emit(event, session("first", "new-token"));
-    fireEvent.focus(window);
-    expect(screen.getByRole("heading", { name: "ought" })).toBeVisible();
-    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
-    expect(fetcher.mock.calls).toHaveLength(requests);
-    fireEvent.click(screen.getByRole("button", { name: "Refresh test data" }));
-    await waitFor(() => expect(fetcher.mock.calls).toHaveLength(requests + 1));
-    expect(fetcher.mock.lastCall?.[1]?.headers).toEqual({
-      Authorization: "Bearer new-token",
-    });
-    expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
-  },
-);
-it("clears the old user's words on sign out", async () => {
+it("keeps words visible without fetching on same-user session renewal and focus", async () => {
+  mount();
+  expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
+  const requests = vi.mocked(fetch).mock.calls.length;
+  emit({ ...session(), expires: "2028-10-11T00:00:00Z" });
+  fireEvent.focus(window);
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
+  expect(screen.getByRole("heading", { name: "ought" })).toBeVisible();
+  expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+  expect(vi.mocked(fetch)).toHaveBeenCalledTimes(requests);
+  fireEvent.click(screen.getByRole("button", { name: "Refresh test data" }));
+  await waitFor(() =>
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(requests + 1),
+  );
+  expect(vi.mocked(fetch).mock.lastCall?.[1]?.headers).toBeUndefined();
+});
+it("shows login immediately for a server-confirmed absent session", () => {
+  authentication.session = null;
+  mount();
+  expect(
+    screen.getByRole("heading", { name: "Log in to Voc4b" }),
+  ).toBeVisible();
+  expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Continue with Google" }),
+  ).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Continue with Facebook" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Continue with ChatGPT" }),
+  ).toBeDisabled();
+});
+it("clears the previous user's words on signout", async () => {
   mount();
   await screen.findByRole("heading", { name: "ought" });
-  emit("SIGNED_OUT", null);
+  emit(null);
   expect(
     screen.queryByRole("heading", { name: "ought" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Log in to Voc4b" }),
+  ).toBeVisible();
 });
-it("hides the old user's words and loads the new user's data on account change", async () => {
+it("hides previous words and loads the new owner's words on account change", async () => {
   mount();
   await screen.findByRole("heading", { name: "ought" });
   vi.stubGlobal(
@@ -141,41 +154,19 @@ it("hides the old user's words and loads the new user's data on account change",
         ),
     ),
   );
-  emit("SIGNED_IN", session("second", "second-token"));
+  emit(session("second"));
   expect(
     screen.queryByRole("heading", { name: "ought" }),
   ).not.toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
-  expect(vi.mocked(fetch).mock.lastCall?.[1]?.headers).toEqual({
-    Authorization: "Bearer second-token",
-  });
 });
-it("ignores an older bootstrap session after a newer auth event", async () => {
-  const bootstrap = Promise.withResolvers<{
-    data: { session: Session };
-    error: null;
-  }>();
-  auth.getSession.mockReturnValue(bootstrap.promise);
-  mount();
-  emit("SIGNED_IN", session("second", "second-token"));
-  await screen.findByRole("heading", { name: "ought" });
-  await act(async () =>
-    bootstrap.resolve({ data: { session: session() }, error: null }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Refresh test data" }));
-  await waitFor(() =>
-    expect(vi.mocked(fetch).mock.lastCall?.[1]?.headers).toEqual({
-      Authorization: "Bearer second-token",
-    }),
-  );
-});
-it("keeps an in-flight word load valid when the same user's token refreshes", async () => {
+it("keeps an in-flight load valid during the same owner's session renewal", async () => {
   const pending = Promise.withResolvers<Response>();
   const fetcher = vi.fn(() => pending.promise);
   vi.stubGlobal("fetch", fetcher);
   mount();
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
-  emit("TOKEN_REFRESHED", session("first", "new-token"));
+  emit({ ...session(), expires: "2028-10-11T00:00:00Z" });
   await act(async () =>
     pending.resolve(new Response(JSON.stringify({ entries: [saved] }))),
   );

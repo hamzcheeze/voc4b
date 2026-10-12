@@ -1,3 +1,5 @@
+import { auth } from "../auth";
+import { authProviderOptions } from "../application/auth-providers";
 import type { Metadata } from "next";
 import { appMode } from "../application/config";
 import { Workspace } from "../components/workspace";
@@ -10,11 +12,13 @@ export const metadata: Metadata = {
     "Learn two English words each day with pronunciation and clear definitions.",
 };
 export const dynamic = "force-dynamic";
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const mode = appMode(process.env);
+  const session = mode === "live" ? await auth() : null;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -24,7 +28,13 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
-        <Workspace mode={appMode(process.env)}>{children}</Workspace>
+        <Workspace
+          mode={mode}
+          session={session}
+          providers={authProviderOptions(process.env)}
+        >
+          {children}
+        </Workspace>
       </body>
     </html>
   );

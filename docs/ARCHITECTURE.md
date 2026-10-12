@@ -1,6 +1,6 @@
 # Dictionary data flow
 
-`Workspace.add()` sends the requested word to authenticated `POST /api/words`. The route verifies the Supabase session and calls `addWord()`. The use case validates the word, checks today's count, calls `DictionaryProvider.lookup()`, and saves the entry with `VocabularyRepository.save(word, entry)`.
+`Workspace.add()` sends the requested word to authenticated `POST /api/words`. The route verifies the NextAuth cookie session and calls `addWord()`. The use case validates the word, checks today's count, calls `DictionaryProvider.lookup()`, and saves the entry with `VocabularyRepository.save(word, entry)`.
 
 `POST /api/words` is the backend for the vocabulary UI. It calls `CambridgeDictionary` directly inside the Next.js Node server. The server does not call a separate dictionary service or an HTTP route in the same app.
 
@@ -23,16 +23,24 @@ The requested word remains `Vocabulary.word`. A canonical phrase such as `ought 
 
 Migration 002 backfills legacy content before dropping the old English, Thai, and syllable columns. It never deletes rows. Reapplying migration 002 keeps existing dictionary content.
 
+## Accounts and sessions
+
+NextAuth owns Google, Facebook, and the registered ChatGPT OIDC flow. Its Supabase adapter stores users, linked provider accounts, and sessions in `next_auth`. All authentication tables have RLS enabled and service-role-only privileges. Supabase Auth no longer authenticates notebook requests.
+
+Migration 005 copies the existing Supabase user UUIDs before repointing the vocabulary foreign key. It leaves vocabulary and Supabase Auth records intact. Google can attach an authoritative Gmail or verified Workspace identity to an imported email. Facebook and ChatGPT do not merge accounts based on email alone. Repeat sign-ins resolve the stored provider subject.
+
+Database sessions persist for 400 days and renew during use. Logout deletes the session record. Session JSON contains the application user ID, not provider access tokens or Supabase secrets. The browser holds an HttpOnly opaque session cookie. Vocabulary refresh depends on user ID rather than session-object changes, so session renewal does not replace the notebook with a loading state.
+
 ## Database writes
 
-Authenticated users can select only their own rows through RLS. Direct inserts, updates, and deletes are denied. `save_vocabulary(p_word, p_entry)` verifies the nested JSON schema because a user can call the RPC without going through Next.js.
+Only the Next.js server reads or writes vocabulary. The API derives the owner ID from a verified NextAuth session. The repository includes that ID in every list, duplicate check, and RPC. Browsers cannot choose a trusted owner or call service-only RPCs directly.
 
-The save RPC uses an empty search path and takes a transaction advisory lock for the authenticated user. It calculates the Bangkok date after the lock, checks the two-word limit and case-insensitive duplicate word, then inserts. The unique user/day/slot constraint is a second cap check.
+The save RPC validates the nested entry, uses an empty search path, and takes a transaction advisory lock for the owner. It calculates the Bangkok date after the lock, checks the two-word limit and case-insensitive duplicate word, then inserts. The unique user/day/slot constraint is a second cap check. Deleting today's word takes the same lock and compacts the remaining slot so a replacement can be saved.
 
-`clear_vocabulary_today(p_expected_day)` uses the same lock and date rule. The expected day is a guard, not a choice of deletion date. After the lock, the RPC refuses a day mismatch and deletes only the caller's current-day rows. When omitted, the expected day defaults to the Bangkok date at invocation. The local script passes the authorized date explicitly.
+Migration 005 removes the previous browser-authenticated RPC access. The optional clear-today script uses the authenticated Next.js API and an explicit current Bangkok date.
 
 ## Display
 
 `WordCard` displays the requested word, the US IPA and audio when available, the first definition, and its examples. UK pronunciation is the fallback. Disclosures contain additional senses, pronunciation variants, and verb forms. The UI retains the monochrome palette and theme preference. React renders dictionary text without HTML injection.
 
-The demo uses authored fixtures in a versioned localStorage key. It uses no network service. Live Supabase rows pass the same Zod content schema at the repository boundary. Missing migration errors tell the user to apply migration 002.
+The demo uses authored fixtures in a versioned localStorage key. It uses no network service. Live Supabase rows pass the same Zod content schema at the repository boundary. Missing migration errors ask for the latest SQL migration.

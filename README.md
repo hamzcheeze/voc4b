@@ -13,42 +13,64 @@ npm run dev
 
 Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and stores sample words in your browser. Try `rescind` or `serene`. Demo mode does not connect to a dictionary or Supabase.
 
-## Connect Supabase
+## Connect Supabase and OAuth
 
 1. For a new database, run `supabase/migrations/001_vocabulary.sql` in the Supabase SQL Editor.
 2. Run `supabase/migrations/002_dictionary.sql` on both new and existing databases. This migration preserves older English entries as `legacy` content and changes new entries to dictionary content.
 3. Run `supabase/migrations/003_unique_words.sql` to prevent saving a word already in your library on any earlier day. Existing entries are preserved.
 4. Run `supabase/migrations/004_remove_today_word.sql` to allow removing one of today's words and filling its slot with another word.
-5. Create a user with a confirmed email in Supabase Authentication, then sign in to the app.
-6. Add these values to `.env.local` and restart Next.js:
+5. Run `supabase/migrations/005_nextauth.sql`. It preserves existing vocabulary and user IDs while moving account and session storage to NextAuth.
+6. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
+7. Add these values to `.env.local`:
 
 ```dotenv
 APP_MODE=live
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-NEXT_PUBLIC_ALLOW_SIGNUP=false
+SUPABASE_SECRET_KEY=your-server-secret-key
+AUTH_SECRET=your-random-auth-secret
+AUTH_URL=http://localhost:3000
+AUTH_GOOGLE_ID=your-google-client-id
+AUTH_GOOGLE_SECRET=your-google-client-secret
+AUTH_FACEBOOK_ID=your-facebook-app-id
+AUTH_FACEBOOK_SECRET=your-facebook-app-secret
 ```
 
-You can use `NEXT_PUBLIC_SUPABASE_ANON_KEY` instead of the publishable key.
+Generate `AUTH_SECRET` with `npx auth secret`. Keep this value and `SUPABASE_SECRET_KEY` private. Do not prefix them with `NEXT_PUBLIC_`. The browser does not need a Supabase key. See [.env.example](.env.example) for all settings.
 
-Add one English word at a time. `POST /api/words` verifies the user's session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
+Existing `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` values work as aliases for the Google settings above.
+
+8. Register the provider callbacks below, then restart Next.js. Google needs an OAuth web application. Facebook needs a dedicated development app for localhost and the appropriate app permissions before other people can use it.
+
+| Provider | Local callback                                     |
+| -------- | -------------------------------------------------- |
+| Google   | `http://localhost:3000/api/auth/callback/google`   |
+| Facebook | `http://localhost:3000/api/auth/callback/facebook` |
+| ChatGPT  | `http://localhost:3000/api/auth/callback/chatgpt`  |
+
+ChatGPT website sign-in requires an [OAuth client issued by OpenAI](https://developers.openai.com/siwc/website). An OpenAI API key does not enable login. Set `AUTH_CHATGPT_ID` and the registered `AUTH_CHATGPT_TOKEN_AUTH_METHOD`. Confidential clients also need `AUTH_CHATGPT_SECRET`. The button stays unavailable until its configuration is present.
+
+First OAuth sign-in creates the account. Later sign-ins reuse the linked provider identity. To recover an invited account and its vocabulary, use Google with the same Gmail or verified Google Workspace address. Google-verified third-party email alone cannot claim an existing account. Facebook and ChatGPT do not automatically merge accounts by email. Use the original sign-in provider if the app reports an account conflict.
+
+Sessions use an HttpOnly cookie and a database record with a rolling 400-day lifetime. The app renews sessions during use. Provider access-token expiry does not expire the notebook session. Signing out revokes the database session. Browser cookie deletion or long inactivity can still require another sign-in.
+
+For iPhone OAuth testing, use a stable HTTPS domain with registered callbacks. `localhost` on an iPhone refers to the iPhone itself, and OAuth providers may reject raw LAN IP callbacks. Cookies for `localhost` and a LAN IP are separate.
+
+Add one English word at a time. `POST /api/words` verifies the NextAuth session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
 `DELETE /api/words?id=...` removes only a word saved today by the signed-in user.
 
 A failed request, missing word, malformed response, or unrelated redirect leaves today's word slots unchanged. If Simple Wiktionary is unavailable, Cambridge data can still be saved without verb forms. The app skips blank definitions and does not save an entry if no usable definitions remain.
 
 ## Clear today's words
 
-The `clear_vocabulary_today(p_expected_day)` function checks that the requested date still matches the current date in `Asia/Bangkok`, then deletes only the calling user's words for that day. The app never clears data automatically.
-
-Use an access token from the signed-in user. The script stops if the date has changed. Do not use a service-role key in place of a user token.
+The app never clears data automatically. The optional script removes today's words through the same authenticated API used by the UI. Copy the signed-in browser's NextAuth session cookie into `AUTH_SESSION_COOKIE` in your local shell. The script requires the explicit current Bangkok date and stops if that date changes. Keep the cookie private.
 
 ```sh
-SUPABASE_USER_ACCESS_TOKEN=your-user-access-token node scripts/clear-today.mjs --day 2026-10-10
+AUTH_SESSION_COOKIE='authjs.session-token=your-session-token' node scripts/clear-today.mjs --day 2026-10-12
 ```
 
 ## Deploy
 
-Set the Supabase variables above and configure the Supabase Site URL to match your app URL. Use a Node.js server that can reach `dictionary.cambridge.org`, `simple.wiktionary.org`, and Supabase. Then run:
+Set the server secrets above, `AUTH_URL` to your HTTPS origin, and `AUTH_TRUST_HOST=true` only behind a trusted host or proxy. Register each enabled provider's production callback at `/api/auth/callback/{provider}`. Use a Node.js server that can reach the configured providers, `dictionary.cambridge.org`, `simple.wiktionary.org`, and Supabase. Then run:
 
 ```sh
 npm ci

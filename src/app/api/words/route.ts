@@ -1,30 +1,32 @@
+import { auth } from "../../../auth";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appMode } from "../../../application/config";
 import { addWord } from "../../../application/add-word";
 import { CambridgeDictionary } from "../../../adapters/dictionary";
-import { SupabaseRepository, userClient } from "../../../adapters/supabase";
+import { SupabaseRepository, serviceClient } from "../../../adapters/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store" };
 const dictionary = new CambridgeDictionary();
-async function repository(request: NextRequest) {
+async function repository() {
   if (appMode(process.env) !== "live")
-    throw new ApiError("Supabase is not configured for live mode.", 503);
-  const token = request.headers
-    .get("authorization")
-    ?.match(/^Bearer (.+)$/)?.[1];
-  if (!token) throw new ApiError("Please sign in.", 401);
-  const client = userClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
-    token,
+    throw new ApiError("Authentication is not configured for live mode.", 503);
+  const session = await auth();
+  if (!session?.user?.id) throw new ApiError("Please sign in.", 401);
+  const configuration = z
+    .object({
+      NEXT_PUBLIC_SUPABASE_URL: z.url(),
+      SUPABASE_SECRET_KEY: z.string().min(1),
+    })
+    .parse(process.env);
+  return new SupabaseRepository(
+    serviceClient(
+      configuration.NEXT_PUBLIC_SUPABASE_URL,
+      configuration.SUPABASE_SECRET_KEY,
+    ),
+    z.uuid().parse(session.user.id),
   );
-  const { data, error } = await client.auth.getUser(token);
-  if (error || !data.user)
-    throw new ApiError("Your session has expired. Please sign in again.", 401);
-  return new SupabaseRepository(client);
 }
 class ApiError extends Error {
   constructor(
@@ -52,10 +54,10 @@ function assertSameOrigin(request: NextRequest) {
   if (origin && origin !== expectedOrigin)
     throw new ApiError("Requests from other websites are not allowed.", 403);
 }
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     return NextResponse.json(
-      { entries: await (await repository(request)).list() },
+      { entries: await (await repository()).list() },
       { headers },
     );
   } catch (error) {
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
     assertSameOrigin(request);
     if (Number(request.headers.get("content-length") || 0) > 2048)
       throw new ApiError("Request is too large.", 413);
-    const repo = await repository(request);
+    const repo = await repository();
     const text = await request.text();
     if (text.length > 2048) throw new ApiError("Request is too large.", 413);
     let body: unknown;
@@ -100,7 +102,7 @@ export async function DELETE(request: NextRequest) {
       .uuid()
       .safeParse(request.nextUrl.searchParams.get("id"));
     if (!id.success) throw new ApiError("Choose a word to remove.", 400);
-    const removed = await (await repository(request)).removeToday(id.data);
+    const removed = await (await repository()).removeToday(id.data);
     if (!removed)
       throw new ApiError("This word is no longer in today's list.", 404);
     return new NextResponse(null, { status: 204, headers });

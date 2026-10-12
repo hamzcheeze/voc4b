@@ -1,18 +1,22 @@
 import { it, expect, vi, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { DELETE, GET, POST } from "../src/app/api/words/route";
-afterEach(() => vi.unstubAllEnvs());
+const authentication = vi.hoisted(() => ({ auth: vi.fn(async () => null) }));
+vi.mock("../src/auth", () => ({ auth: authentication.auth }));
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.clearAllMocks();
+});
 it("production missing configuration is explicit 503", async () => {
   vi.stubEnv("APP_MODE", "live");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-  expect(
-    (await GET(new NextRequest("http://localhost:3000/api/words"))).status,
-  ).toBe(503);
+  expect((await GET()).status).toBe(503);
 });
-it("requires bearer authentication before dictionary work", async () => {
+it("requires a server session before dictionary work", async () => {
   vi.stubEnv("APP_MODE", "live");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public");
+  vi.stubEnv("SUPABASE_SECRET_KEY", "server-secret");
+  vi.stubEnv("AUTH_SECRET", "auth-secret");
   expect(
     (
       await POST(
@@ -40,7 +44,8 @@ it("rejects cross origin submission", async () => {
 it("accepts the browser host when Next binds to an internal dev address", async () => {
   vi.stubEnv("APP_MODE", "live");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "public");
+  vi.stubEnv("SUPABASE_SECRET_KEY", "server-secret");
+  vi.stubEnv("AUTH_SECRET", "auth-secret");
   const response = await POST(
     new NextRequest("http://0.0.0.0:3000/api/words", {
       method: "POST",
@@ -82,7 +87,8 @@ it("requires a valid word ID and authentication for deletion", async () => {
   expect(invalid.status).toBe(400);
   vi.stubEnv("APP_MODE", "live");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public");
+  vi.stubEnv("SUPABASE_SECRET_KEY", "server-secret");
+  vi.stubEnv("AUTH_SECRET", "auth-secret");
   const unauthenticated = await DELETE(
     new NextRequest(
       "http://localhost:3000/api/words?id=00000000-0000-4000-8000-000000000001",
@@ -99,4 +105,12 @@ it("rejects deletion from another website", async () => {
     ),
   );
   expect(response.status).toBe(403);
+});
+
+it("requires an Auth.js session independently of caller identity", async () => {
+  vi.stubEnv("APP_MODE", "live");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+  vi.stubEnv("SUPABASE_SECRET_KEY", "server-secret");
+  vi.stubEnv("AUTH_SECRET", "auth-secret");
+  expect((await GET()).status).toBe(401);
 });

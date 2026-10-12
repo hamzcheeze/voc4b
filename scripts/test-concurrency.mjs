@@ -1,5 +1,3 @@
-// DATABASE_URL must point to a disposable local database with the migration applied.
-// Uses separate psql processes/connections: never run against your real notebook.
 import { spawn } from "node:child_process";
 import assert from "node:assert/strict";
 if (!process.env.TEST_DATABASE_URL)
@@ -24,9 +22,9 @@ function sql(query) {
     p.on("close", (code) => resolve({ code, out, err }));
   });
 }
-let result = await sql(`insert into auth.users(id) values('${uid}');`);
+let result = await sql(`insert into next_auth.users(id) values('${uid}');`);
 assert.equal(result.code, 0, result.err);
-const prefix = `set role authenticated;select set_config('request.jwt.claim.sub','${uid}',false);`;
+const prefix = "set role service_role;";
 const call = (word) => {
   const entry = {
     headword: word,
@@ -43,7 +41,7 @@ const call = (word) => {
     ],
     verbForms: [],
   };
-  return `${prefix}select word from public.save_vocabulary('${word}','${JSON.stringify(entry)}'::jsonb);`;
+  return `${prefix}select word from public.save_vocabulary('${uid}','${word}','${JSON.stringify(entry)}'::jsonb);`;
 };
 const results = await Promise.all(
   ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta"].map(

@@ -3,8 +3,8 @@ export function appMode(env: Record<string, string | undefined>): AppMode {
   if (env.APP_MODE === "demo") return "demo";
   const configured = [
     env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    env.SUPABASE_SECRET_KEY,
+    env.AUTH_SECRET,
   ];
   if (configured.every(Boolean)) return "live";
   if (

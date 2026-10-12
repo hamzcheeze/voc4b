@@ -10,10 +10,14 @@ import React, {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  createClient,
-  type SupabaseClient,
-  type Session,
-} from "@supabase/supabase-js";
+  SessionProvider,
+  useSession,
+  signOut,
+  getSession,
+} from "next-auth/react";
+import type { Session } from "next-auth";
+import type { AuthProviderOption } from "../application/auth-providers";
+import { AuthPanel } from "./auth-panel";
 import type { AppMode } from "../application/config";
 import { dayKey, type Vocabulary } from "../domain/vocabulary";
 import { demoStore } from "../adapters/demo";
@@ -38,59 +42,78 @@ export function useWorkspace() {
 export function Workspace({
   children,
   mode,
+  session,
+  providers,
 }: {
   children: React.ReactNode;
   mode: AppMode;
+  session: Session | null;
+  providers: AuthProviderOption[];
+}) {
+  return (
+    <SessionProvider
+      session={session}
+      refetchOnWindowFocus={false}
+      refetchInterval={3600}
+    >
+      <SessionWorkspace mode={mode} providers={providers}>
+        {children}
+      </SessionWorkspace>
+    </SessionProvider>
+  );
+}
+function SessionWorkspace({
+  children,
+  mode,
+  providers,
+}: {
+  children: React.ReactNode;
+  mode: AppMode;
+  providers: AuthProviderOption[];
+}) {
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
+  useEffect(() => {
+    if (mode === "live" && userId) void getSession({ broadcast: false });
+  }, [mode, userId]);
+  return (
+    <WorkspaceContent
+      key={session?.user?.id || "anonymous"}
+      session={session}
+      authReady={status !== "loading"}
+      mode={mode}
+      providers={providers}
+    >
+      {children}
+    </WorkspaceContent>
+  );
+}
+function WorkspaceContent({
+  children,
+  mode,
+  providers,
+  session,
+  authReady,
+}: {
+  children: React.ReactNode;
+  mode: AppMode;
+  providers: AuthProviderOption[];
+  session: Session | null;
+  authReady: boolean;
 }) {
   const path = usePathname();
-  const [client] = useState<SupabaseClient | null>(() =>
-    mode === "live"
-      ? createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
-        )
-      : null,
-  );
-  const [session, setSession] = useState<Session | null>(null),
-    [authReady, setAuthReady] = useState(mode !== "live");
   const [entries, setEntries] = useState<Vocabulary[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [today, setToday] = useState(dayKey());
   const generation = useRef(0);
-  const currentSession = useRef<Session | null>(null);
-  const userId = session?.user.id;
-  useEffect(() => {
-    if (!client) return;
-    let active = true;
-    let authEventReceived = false;
-    const updateSession = (next: Session | null) => {
-      if (currentSession.current?.user.id !== next?.user.id) {
-        generation.current++;
-        setEntries([]);
-        setLoading(true);
-        setError("");
-      }
-      currentSession.current = next;
-      setSession(next);
-      setAuthReady(true);
-    };
-    client.auth.getSession().then(({ data, error }) => {
-      if (active && !authEventReceived) {
-        if (error) setError("Couldn't verify your session.");
-        updateSession(data.session);
-      }
-    });
-    const { data } = client.auth.onAuthStateChange((_event, next) => {
-      authEventReceived = true;
-      if (active) updateSession(next);
-    });
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, [client]);
+  const userId = session?.user?.id;
+  useEffect(
+    () => () => {
+      generation.current++;
+    },
+    [],
+  );
   const refresh = useCallback(async () => {
     const version = ++generation.current;
     setLoading(true);
@@ -98,11 +121,8 @@ export function Workspace({
     try {
       let rows: Vocabulary[];
       if (mode === "demo") rows = demoStore.list();
-      else if (mode === "live" && userId && currentSession.current) {
+      else if (mode === "live" && userId) {
         const response = await fetch("/api/words", {
-          headers: {
-            Authorization: `Bearer ${currentSession.current.access_token}`,
-          },
           cache: "no-store",
         });
         const data = await response.json();
@@ -147,15 +167,10 @@ export function Workspace({
   async function add(word: string) {
     if (mode === "demo") await demoStore.add(word);
     else {
-      if (!client) throw new Error("The app isn't ready yet.");
-      const {
-        data: { session: current },
-      } = await client.auth.getSession();
-      if (!current) throw new Error("Please sign in again.");
+      if (!userId) throw new Error("Please sign in again.");
       const response = await fetch("/api/words", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${current.access_token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ word }),
@@ -171,14 +186,9 @@ export function Workspace({
   async function remove(id: string) {
     if (mode === "demo") await demoStore.removeToday(id);
     else {
-      if (!client) throw new Error("The app isn't ready yet.");
-      const {
-        data: { session: current },
-      } = await client.auth.getSession();
-      if (!current) throw new Error("Please sign in again.");
+      if (!userId) throw new Error("Please sign in again.");
       const response = await fetch(`/api/words?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${current.access_token}` },
       });
       if (!response.ok) {
         const data = await response.json();
@@ -229,13 +239,13 @@ export function Workspace({
                 </div>
               </details>
             )}
-            {session && client && (
+            {mode === "live" && session && (
               <button
                 className="text-button"
                 onClick={() =>
-                  void client.auth.signOut().then(({ error }) => {
-                    if (error) setError("Couldn't sign out. Please try again.");
-                  })
+                  void signOut({ redirect: false }).catch(() =>
+                    setError("Couldn't sign out. Please try again."),
+                  )
                 }
               >
                 Sign out
@@ -248,7 +258,7 @@ export function Workspace({
             <section className="setup-panel">
               <h1>Connection setup</h1>
               <p>
-                Add your Supabase keys as described in the README to get
+                Configure authentication as described in the README to get
                 started.
               </p>
             </section>
@@ -256,94 +266,13 @@ export function Workspace({
             <p role="status" className="loading">
               Loading…
             </p>
-          ) : mode === "live" && !session && client ? (
-            <AuthPanel client={client} />
+          ) : mode === "live" && !session ? (
+            <AuthPanel providers={providers} />
           ) : (
             children
           )}
         </main>
       </div>
     </Context.Provider>
-  );
-}
-function AuthPanel({ client }: { client: SupabaseClient }) {
-  const [email, setEmail] = useState(""),
-    [password, setPassword] = useState(""),
-    [signup, setSignup] = useState(false),
-    [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
-    [error, setError] = useState("");
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const result = signup
-        ? await client.auth.signUp({ email, password })
-        : await client.auth.signInWithPassword({ email, password });
-      if (result.error) throw result.error;
-      if (signup && !result.data.session)
-        setMessage(
-          "Account created. Check your email to confirm it before signing in.",
-        );
-    } catch {
-      setError(
-        signup
-          ? "Couldn't create your account. Check your email and password, then try again."
-          : "Couldn't sign in. Check your password and confirm your email, then try again.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <section className="auth-panel">
-      <h1>Sign in</h1>
-      <form onSubmit={submit}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          minLength={8}
-          required
-          autoComplete={signup ? "new-password" : "current-password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-        {message && <p role="status">{message}</p>}
-        <button className="primary" disabled={busy}>
-          {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
-        </button>
-      </form>
-      {process.env.NEXT_PUBLIC_ALLOW_SIGNUP === "true" && (
-        <button
-          className="text-button"
-          onClick={() => {
-            setSignup(!signup);
-            setError("");
-            setMessage("");
-          }}
-        >
-          {signup
-            ? "Already have an account? Sign in"
-            : "Need an account? Sign up"}
-        </button>
-      )}
-    </section>
   );
 }
