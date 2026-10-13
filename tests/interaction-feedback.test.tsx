@@ -194,9 +194,9 @@ it("shows the inline form immediately and rejects an existing word without a req
   mount();
   const input = screen.getByRole("textbox", { name: "Word" });
   expect(input).not.toHaveFocus();
-  expect(screen.getByRole("button", { name: "Add a word" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   fireEvent.change(input, { target: { value: "  OUGHT  " } });
-  fireEvent.submit(screen.getByRole("form", { name: "Add a word" }));
+  fireEvent.submit(screen.getByRole("form", { name: "Add" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     DUPLICATE_WORD_MESSAGE,
   );
@@ -208,7 +208,7 @@ it("saves from the inline form once, keeps controls disabled while pending, then
   vi.mocked(fetch).mockReturnValue(pending.promise);
   mount([]);
   const input = screen.getByRole("textbox", { name: "Word" });
-  const form = screen.getByRole("form", { name: "Add a word" });
+  const form = screen.getByRole("form", { name: "Add" });
   fireEvent.change(input, { target: { value: "serene" } });
   fireEvent.submit(form);
   fireEvent.submit(form);
@@ -232,7 +232,7 @@ it("saves from the inline form once, keeps controls disabled while pending, then
   expect(screen.getByRole("heading", { name: "serene" })).toBeVisible();
   expect(input).toHaveValue("");
   expect(input).toBeEnabled();
-  expect(screen.getByRole("button", { name: "Add a word" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
 });
 it("keeps a failed word in the inline input for correction", async () => {
   vi.mocked(fetch).mockImplementation(async (_url, options) =>
@@ -247,7 +247,7 @@ it("keeps a failed word in the inline input for correction", async () => {
   mount();
   const input = screen.getByRole("textbox", { name: "Word" });
   fireEvent.change(input, { target: { value: "unknownword" } });
-  fireEvent.submit(screen.getByRole("form", { name: "Add a word" }));
+  fireEvent.submit(screen.getByRole("form", { name: "Add" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Word not found.");
   expect(input).toHaveValue("unknownword");
   expect(input).toBeEnabled();

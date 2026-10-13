@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^Add$/ })).toHaveCount(1);
 });
 test("Today and History switch locally and support direct URLs and browser history", async ({
   page,
@@ -37,20 +37,20 @@ test("zero → one → two, persistence, history and demo reset", async ({
 }) => {
   await expect(page.getByText("Demo", { exact: true })).toBeVisible();
   await page.getByLabel("Word", { exact: true }).fill("rescind");
-  await page.getByRole("button", { name: "Add a word", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^Add$/ })).toHaveCount(1);
   await page.getByLabel("Word", { exact: true }).fill("serene");
-  await page.getByRole("button", { name: "Add a word", exact: true }).click();
-  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Add$/ })).toHaveCount(0);
   await expect(page.getByText("2 / 2 words")).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Add$/ })).toHaveCount(0);
   await page.getByRole("link", { name: "History" }).click();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await page.getByLabel("Time period", { exact: true }).selectOption("year");
@@ -74,15 +74,15 @@ test("zero → one → two, persistence, history and demo reset", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("link", { name: "Today" }).click();
-  await expect(page.getByRole("button", { name: /Add a word/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^Add$/ })).toHaveCount(1);
 });
 test("transparent unsupported word, focus, no slot consumption", async ({
   page,
 }) => {
   await page.getByLabel("Word", { exact: true }).fill("gibberish");
-  await page.getByRole("button", { name: "Add a word", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(
-    page.getByRole("form", { name: "Add a word" }).getByRole("alert"),
+    page.getByRole("form", { name: "Add" }).getByRole("alert"),
   ).toContainText("Demo");
   await expect(page.getByLabel("Word", { exact: true })).toHaveValue(
     "gibberish",
@@ -101,7 +101,7 @@ test("removing a word restores the inline form for a replacement", async ({
       page.getByRole("heading", { name: word, exact: true }),
     ).toBeVisible();
   }
-  await expect(page.getByRole("form", { name: "Add a word" })).toHaveCount(0);
+  await expect(page.getByRole("form", { name: "Add" })).toHaveCount(0);
   await page
     .getByRole("button", { name: "Remove rescind", exact: true })
     .click();
@@ -117,14 +117,14 @@ test("removing a word restores the inline form for a replacement", async ({
     page.getByRole("heading", { name: "lucid", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("2 / 2 words")).toBeVisible();
-  await expect(page.getByRole("form", { name: "Add a word" })).toHaveCount(0);
+  await expect(page.getByRole("form", { name: "Add" })).toHaveCount(0);
 });
 test("accessible desktop/mobile, IPA is visible without horizontal overflow", async ({
   page,
 }, testInfo) => {
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   const input = page.getByLabel("Word", { exact: true });
-  const add = page.getByRole("button", { name: "Add a word", exact: true });
+  const add = page.getByRole("button", { name: "Add", exact: true });
   const inputBox = await input.boundingBox();
   const buttonBox = await add.boundingBox();
   expect(inputBox).not.toBeNull();
@@ -166,7 +166,7 @@ test("dark mode persists through navigation and reload, with readable monochrome
   ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByLabel("Word", { exact: true }).fill("rescind");
-  await page.getByRole("button", { name: "Add a word", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.locator(".pronunciation p")).toHaveText("/rɪˈsɪnd/");
   const palette = await page
     .locator("body,.part-of-speech,.meaning p,.pronunciation p,.brand")

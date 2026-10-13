@@ -153,7 +153,7 @@ try {
         );
       });
     }, word);
-    await page.getByRole("button", { name: "Add a word", exact: true }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     const response = await postResponse;
     const body = await response.json();
     if (response.status() !== 201)

@@ -53,9 +53,7 @@ try {
           });
       });
       await page.goto(base.href);
-      await page
-        .getByRole("button", { name: "Add a word", exact: true })
-        .waitFor();
+      await page.getByRole("button", { name: "Add", exact: true }).waitFor();
       const timeClick = async (selector, expected) => {
         await page.evaluate(
           ({ selector, expected }) => {
@@ -162,9 +160,7 @@ try {
           );
         });
       }, word);
-      await page
-        .getByRole("button", { name: "Add a word", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Add", exact: true }).click();
       const saved = await saveResponse;
       if (saved.status() !== 201)
         throw new Error(`Save failed ${saved.status()}`);

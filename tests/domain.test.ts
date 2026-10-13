@@ -4,6 +4,7 @@ import {
   filterHistory,
   remainingSlots,
   validateWord,
+  validateDictionaryTerm,
   dictionaryEntrySchema,
   matchesHeadword,
 } from "../src/domain/vocabulary";
@@ -13,6 +14,39 @@ const entry = (day: string, word = "rescind") => ({
   day,
   word,
   content: { kind: "dictionary" as const, entry: dictionaryEntry },
+});
+describe("historical dictionary terms", () => {
+  it.each([
+    [" money   siphoning ", "money siphoning"],
+    ["rocket science", "rocket science"],
+    ["in advance", "in advance"],
+    ["grunt work", "grunt work"],
+    ["rite of passage", "rite of passage"],
+    ["aloe vera", "aloe vera"],
+    ["cliché", "cliché"],
+    ["cliche\u0301", "cliché"],
+    ["mother-in-law", "mother-in-law"],
+    ["someone's", "someone's"],
+    ["omni-", "omni-"],
+  ])("accepts the dictionary term %s", (input, expected) => {
+    expect(validateDictionaryTerm(input)).toBe(expected);
+  });
+  it.each([
+    "คำไทย",
+    "hello\nworld",
+    "word\u0000",
+    "../word",
+    "",
+    "a".repeat(81),
+  ])("rejects unsafe or non-English terms %s", (input) =>
+    expect(() => validateDictionaryTerm(input)).toThrow(),
+  );
+  it.each(["rocket science", "cliché"])(
+    "keeps today's one-word restriction for %s",
+    (input) => {
+      expect(() => validateWord(input)).toThrow("Enter one English word");
+    },
+  );
 });
 describe("Bangkok calendar and two-word policy", () => {
   it("changes day at Bangkok midnight, not UTC midnight", () => {
@@ -72,6 +106,39 @@ describe("dictionary domain", () => {
     expect(matchesHeadword(" Ought ", "ought  to")).toBe(true));
   it("rejects unrelated canonical words", () =>
     expect(matchesHeadword("ought", "bought")).toBe(false));
+  it.each([
+    ["turn down", "turn something/someone down"],
+    ["blow up", "blow (someone/something) up"],
+    ["stave-off", "stave something/someone off"],
+    ["stave-off", "stave sth off"],
+    ["rely-on", "rely on/upon someone/something"],
+    ["rely upon", "rely on/upon something/someone"],
+    ["stepping-stone", "stepping stone"],
+    ["seabed", "the seabed"],
+    ["turn down", "turn sb/sth down"],
+    ["blend-in", "blend in/blend into something"],
+    ["blend into", "blend in/blend into something"],
+  ])("matches %s to Cambridge's heading %s", (word, headword) => {
+    expect(matchesHeadword(word, headword)).toBe(true);
+  });
+  it.each([
+    ["ought", "bought"],
+    ["turn", "turn something/someone down"],
+    ["blow", "blow (someone/something) up"],
+    ["turn up", "turn something/someone down"],
+    ["resign", "re-sign"],
+    ["re-sign", "resign"],
+    ["sea", "the seabed"],
+    ["sea", "sea level"],
+    ["curated", "curate"],
+    ["upsides", "upside"],
+    ["downsides", "downside"],
+    ["unbound", "unbind"],
+    ["blend", "blend in/blend into something"],
+    ["blend out", "blend in/blend into something"],
+  ])("rejects %s when Cambridge returns %s", (word, headword) => {
+    expect(matchesHeadword(word, headword)).toBe(false);
+  });
 });
 
 it("orders entries chronologically within the same day rather than alphabetically", () => {

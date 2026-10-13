@@ -9,3 +9,5 @@ playwright-report/
 vocab2words.pdf
 *.log
 *.png
+tmp/pdfs/
+output/imports/

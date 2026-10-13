@@ -3,7 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appMode } from "../../../application/config";
 import { addWord } from "../../../application/add-word";
-import { DAILY_LIMIT, validateWord } from "../../../domain/vocabulary";
+import {
+  historicalDaySchema,
+  importHistoricalWord,
+} from "../../../application/import-historical-word";
+import {
+  DAILY_LIMIT,
+  validateDictionaryTerm,
+  validateWord,
+} from "../../../domain/vocabulary";
 import { CambridgeDictionary } from "../../../adapters/dictionary";
 import { SupabaseRepository, serviceClient } from "../../../adapters/supabase";
 export const runtime = "nodejs";
@@ -85,14 +93,45 @@ async function wordRequest(request: NextRequest) {
   } catch {
     throw new ApiError("Invalid request format.", 400);
   }
-  const parsed = z.object({ word: z.string() }).safeParse(body);
+  const parsed = z
+    .object({ word: z.string(), day: z.string().optional() })
+    .safeParse(body);
   if (!parsed.success) throw new ApiError("Enter a word.", 400);
-  return { ...authenticated, word: validateWord(parsed.data.word) };
+  return {
+    ...authenticated,
+    word: parsed.data.word,
+    day: parsed.data.day,
+  };
 }
 export async function POST(request: NextRequest) {
   try {
-    const { repo, word } = await wordRequest(request);
-    const entry = await addWord(word, { repository: repo, dictionary });
+    const { repo, word, day, userId } = await wordRequest(request);
+    if (day !== undefined) {
+      if (process.env.HISTORY_IMPORT_USER_ID !== userId)
+        throw new ApiError(
+          "Historical imports are not enabled for this account.",
+          403,
+        );
+      const parsed = historicalDaySchema.safeParse(day);
+      if (!parsed.success)
+        throw new ApiError("Choose a valid date before today.", 400);
+      const result = await importHistoricalWord(
+        validateDictionaryTerm(word),
+        parsed.data,
+        {
+          repository: repo,
+          dictionary,
+        },
+      );
+      return NextResponse.json(result, {
+        status: result.skipped ? 200 : 201,
+        headers,
+      });
+    }
+    const entry = await addWord(validateWord(word), {
+      repository: repo,
+      dictionary,
+    });
     return NextResponse.json({ entry }, { status: 201, headers });
   } catch (error) {
     return failure(error);
@@ -101,7 +140,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   let release: (() => void) | undefined;
   try {
-    const { repo, userId, word } = await wordRequest(request);
+    const { repo, userId, word: input } = await wordRequest(request);
+    const word = validateWord(input);
     const now = Date.now();
     for (const [id, warmup] of warmups) {
       if (!warmup.pending && warmup.nextAt <= now) warmups.delete(id);

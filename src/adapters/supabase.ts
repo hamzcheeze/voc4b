@@ -1,6 +1,10 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { VocabularyRepository } from "../application/add-word";
+import type {
+  HistoricalDay,
+  HistoricalImportResult,
+} from "../application/import-historical-word";
 import { z } from "zod";
 import {
   vocabularySchema,
@@ -61,6 +65,63 @@ export class SupabaseRepository implements VocabularyRepository {
         "Couldn't check your saved words. Please try again.",
       );
     return data.length > 0;
+  }
+  async findWord(word: string): Promise<Vocabulary | null> {
+    const { data, error } = await this.client
+      .from("vocabulary")
+      .select("id,word,day,created_at,content")
+      .eq("user_id", this.userId)
+      .ilike("word", word)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw databaseError(error, "Couldn't check your saved words.");
+    return data === null ? null : vocabularySchema.parse(data);
+  }
+  async saveHistorical(
+    word: string,
+    day: HistoricalDay,
+    entry: DictionaryEntry,
+  ): Promise<HistoricalImportResult> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { data: rows, error: readError } = await this.client
+        .from("vocabulary")
+        .select("slot")
+        .eq("user_id", this.userId)
+        .eq("day", day);
+      if (readError)
+        throw databaseError(
+          readError,
+          "Couldn't read the historical word count.",
+        );
+      const slots = z
+        .array(z.object({ slot: z.union([z.literal(1), z.literal(2)]) }))
+        .parse(rows);
+      const slot = [1, 2].find(
+        (candidate) => !slots.some((row) => row.slot === candidate),
+      );
+      if (!slot) throw new Error("This historical date already has two words.");
+      const { data, error } = await this.client
+        .from("vocabulary")
+        .insert({
+          user_id: this.userId,
+          day,
+          slot,
+          word,
+          content: { kind: "dictionary", entry },
+          created_at: new Date(`${day}T00:00:0${slot - 1}+07:00`).toISOString(),
+        })
+        .select("id,word,day,created_at,content")
+        .single();
+      if (!error)
+        return { entry: vocabularySchema.parse(data), skipped: false };
+      if (error.message.includes("duplicate_word") || error.code === "23505") {
+        const existing = await this.findWord(word);
+        if (existing) return { entry: existing, skipped: true };
+        if (error.code === "23505") continue;
+      }
+      throw databaseError(error, "Couldn't import the historical word.");
+    }
+    throw new Error("The historical date changed during import. Please retry.");
   }
   async save(word: string, entry: DictionaryEntry): Promise<Vocabulary> {
     const { data, error } = await this.client.rpc("save_vocabulary", {

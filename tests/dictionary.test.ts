@@ -43,16 +43,45 @@ it("reads fixed upstream origins directly with lowercase word paths", async () =
     "https://simple.wiktionary.org/wiki/ought",
   ]);
 });
-it.each(["../ought", "ought to", "https://evil.example", "คำไทย", ""])(
+it.each(["../ought", "https://evil.example", "คำไทย", ""])(
   "rejects invalid input before fetching %s",
   async (word) => {
     const fetcher = pages();
     await expect(new CambridgeDictionary().lookup(word)).rejects.toThrow(
-      /one English word/,
+      /English dictionary term/,
     );
     expect(fetcher).not.toHaveBeenCalled();
   },
 );
+it.each(["rocket science", "cliché", "omni-"])(
+  "fetches a historical dictionary term %s",
+  async (term) => {
+    const fetcher = pages(cambridge.replace("ought to", term));
+    const entry = await new CambridgeDictionary().lookup(term);
+    expect(entry.headword).toBe(term);
+    expect(fetcher.mock.calls[0][0].href).toBe(
+      `https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(term.replace(/ /g, "-"))}`,
+    );
+  },
+);
+it("reads the phrasal verb rather than a joined noun when a term contains spaces", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async (url: URL) =>
+        new Response(
+          url.hostname !== "dictionary.cambridge.org"
+            ? ""
+            : url.pathname.endsWith("/turn-down")
+              ? '<span class="hw dhw">turn something/someone down</span><div class="def-block ddef_block"><div class="def ddef_d db">to refuse an offer or request:</div></div>'
+              : '<span class="hw dhw">turndown</span><div class="def-block ddef_block"><div class="def ddef_d db">a fold or reduction:</div></div>',
+        ),
+    ),
+  );
+  const entry = await new CambridgeDictionary().lookup("turn down");
+  expect(entry.headword).toBe("turn something/someone down");
+  expect(entry.definitions[0].text).toBe("to refuse an offer or request:");
+});
 it("keeps meanings when pronunciation and source are absent", async () => {
   const html =
     '<span class="hw dhw">ought</span><div class="def-block ddef_block"><div class="def ddef_d db">A useful English meaning.</div></div>';
@@ -315,4 +344,38 @@ it("bounds concurrent distinct lookups without blocking a matching in-flight wor
   ).toBe(true);
   pages();
   expect(await dictionary.lookup("ought")).toEqual(dictionaryEntry);
+});
+it("preserves Cambridge collocation examples without a sentence span", async () => {
+  pages(
+    '<span class="hw dhw">equity</span><div class="pr dictionary" data-id="cald4"><div class="pr entry-body__el"><span class="pos dpos">noun</span><div class="def-block ddef_block"><div class="def ddef_d db">the situation in which everyone is treated fairly and equally:</div><div class="def-body ddef_b"><div class="examp dexamp"><span class="lu dlu">social equity</span> </div><div class="examp dexamp"><span class="eg deg">The issue of social equity is important.</span></div></div></div></div></div>',
+    "",
+  );
+  const entry = await new CambridgeDictionary().lookup("equity");
+  expect(entry.definitions[0].examples).toEqual([
+    { id: "0", text: "social equity" },
+    { id: "1", text: "The issue of social equity is important." },
+  ]);
+});
+it("reads standalone Cambridge phrase entries such as shingles", async () => {
+  pages(
+    '<div class="pr dictionary" data-id="cald4"><div class="idiom-block"><div class="di-title"><h2 class="headword tw-bw dhw dpos-h_hw"><b>shingles</b></h2></div><span class="di-info"><span class="pos dpos">phrase</span></span><span class="phrase-di-body dphrase-di-body"><div class="def-block ddef_block"><div class="def ddef_d db">a disease caused by the varicella zoster virus:</div><div class="def-body ddef_b"><div class="examp dexamp"><span class="eg deg">Later that year he contracted shingles.</span></div></div></div></span></div></div>',
+    "",
+  );
+  expect(await new CambridgeDictionary().lookup("shingles")).toEqual({
+    headword: "shingles",
+    partsOfSpeech: ["phrase"],
+    pronunciations: [],
+    definitions: [
+      {
+        id: "0",
+        pos: "phrase",
+        source: "cald4",
+        text: "a disease caused by the varicella zoster virus:",
+        examples: [
+          { id: "0", text: "Later that year he contracted shingles." },
+        ],
+      },
+    ],
+    verbForms: [],
+  });
 });

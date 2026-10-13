@@ -4,7 +4,7 @@ import type { DictionaryProvider } from "../application/add-word";
 import {
   dictionaryEntrySchema,
   matchesHeadword,
-  validateWord,
+  validateDictionaryTerm,
   type DictionaryEntry,
 } from "../domain/vocabulary";
 
@@ -148,7 +148,7 @@ function parseCambridgeHtml(args: {
   verbForms: VerbForms;
 }): DictionaryEntry {
   const $ = load(args.html);
-  const headword = $(".hw.dhw").first().text();
+  const headword = $(".hw.dhw, .headword.dhw").first().text();
   if (!headword) throw new Error(INVALID_DATA);
   if (!matchesHeadword(args.word, headword)) throw new Error(WRONG_HEADWORD);
   const partsOfSpeech = [
@@ -192,7 +192,7 @@ function parseCambridgeHtml(args: {
       return {
         id: String(index),
         pos: definition
-          .closest(".pr.entry-body__el")
+          .closest(".pr.entry-body__el, .idiom-block")
           .find(".pos.dpos")
           .first()
           .text(),
@@ -202,7 +202,9 @@ function parseCambridgeHtml(args: {
           .find(".def-body.ddef_b > .examp.dexamp")
           .map((index, example) => ({
             id: String(index),
-            text: $(example).find(".eg.deg").text(),
+            text:
+              $(example).find(".eg.deg").text() ||
+              $(example).find(".lu.dlu").text(),
           }))
           .get(),
       };
@@ -229,7 +231,7 @@ export class CambridgeDictionary implements DictionaryProvider {
   private readonly inFlight = new Map<string, Promise<DictionaryEntry>>();
 
   async lookup(input: string): Promise<DictionaryEntry> {
-    const word = validateWord(input).toLowerCase();
+    const word = validateDictionaryTerm(input).toLowerCase();
     const cached = this.cache.get(word);
     if (cached && cached.expiresAt > Date.now()) return cached.entry;
     this.cache.delete(word);
@@ -250,7 +252,7 @@ export class CambridgeDictionary implements DictionaryProvider {
     const [html, verbForms] = await Promise.all([
       fetchHtml(
         new URL(
-          `/us/dictionary/english/${encodeURIComponent(word)}`,
+          `/us/dictionary/english/${encodeURIComponent(word.replace(/ /g, "-"))}`,
           CAMBRIDGE_ORIGIN,
         ),
       ),

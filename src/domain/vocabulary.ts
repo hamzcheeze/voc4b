@@ -22,6 +22,18 @@ export function validateWord(input: string): string {
     throw new Error("Enter one English word (up to 80 characters).");
   return word;
 }
+export function validateDictionaryTerm(input: string): string {
+  const term = input.normalize("NFC").trim().replace(/\s+/g, " ");
+  if (
+    /\p{Cc}/u.test(input) ||
+    !/^\p{Script=Latin}[\p{Script=Latin}\p{M}]*(?:[-'’ ]\p{Script=Latin}[\p{Script=Latin}\p{M}]*)*-?$/u.test(
+      term,
+    ) ||
+    term.length > 80
+  )
+    throw new Error("Enter an English dictionary term (up to 80 characters).");
+  return term;
+}
 export const syllableSchema = z
   .object({
     text: z
@@ -126,10 +138,38 @@ export const vocabularySchema = z.object({
 export type Vocabulary = z.infer<typeof vocabularySchema>;
 export function matchesHeadword(word: string, headword: string): boolean {
   const normalize = (value: string) =>
-    value.trim().toLowerCase().replace(/\s+/g, " ");
+    value.normalize("NFC").trim().toLowerCase().replace(/\s+/g, " ");
   const requested = normalize(word),
     canonical = normalize(headword);
-  return canonical === requested || canonical.startsWith(`${requested} `);
+  if (canonical === requested) return true;
+  if (requested === "ought" && canonical === "ought to") return true;
+  const requestedTokens = requested.replace(/-/g, " ").split(/\s+/);
+  const canonicalTokens = canonical
+    .replace(/-/g, " ")
+    .split(/\s+/)
+    .filter(
+      (token) =>
+        !/^\(?(?:someone|something|sb|sth)(?:\/(?:someone|something|sb|sth))*\)?$/.test(
+          token,
+        ),
+    );
+  if (canonicalTokens.length > 1 && canonicalTokens[0] === "the")
+    canonicalTokens.shift();
+  const phraseAlternatives = canonicalTokens.join(" ").split("/");
+  if (
+    phraseAlternatives.length > 1 &&
+    phraseAlternatives.every((phrase) =>
+      phrase.startsWith(`${canonicalTokens[0]} `),
+    ) &&
+    phraseAlternatives.includes(requestedTokens.join(" "))
+  )
+    return true;
+  return (
+    requestedTokens.length === canonicalTokens.length &&
+    requestedTokens.every((token, index) =>
+      canonicalTokens[index].split("/").includes(token),
+    )
+  );
 }
 export type HistoryFilters = {
   date?: string;
