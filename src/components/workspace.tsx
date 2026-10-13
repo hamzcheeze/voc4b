@@ -38,6 +38,8 @@ interface WorkspaceState {
   error: string;
   mode: AppMode;
   today: string;
+  historyPages: Map<string, Promise<{ entries: Vocabulary[]; total: number }>>;
+  historyVersion: number;
   refresh: () => Promise<void>;
   add: (word: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -144,6 +146,14 @@ function WorkspaceContent({
     [error, setError] = useState(seed?.kind === "failed" ? seed.error : ""),
     [today, setToday] = useState(seed?.today ?? dayKey());
   const generation = useRef(0);
+  const [historyPages] = useState(
+    () => new Map<string, Promise<{ entries: Vocabulary[]; total: number }>>(),
+  );
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const invalidateHistory = useCallback(() => {
+    historyPages.clear();
+    setHistoryVersion((version) => version + 1);
+  }, [historyPages]);
   const [logout, setLogout] = useState<"idle" | "pending" | "failed" | "done">(
     "idle",
   );
@@ -185,6 +195,7 @@ function WorkspaceContent({
       if (version === generation.current) {
         setEntries(rows);
         setToday(dayKey());
+        invalidateHistory();
       }
     } catch (e) {
       if (version === generation.current)
@@ -192,7 +203,7 @@ function WorkspaceContent({
     } finally {
       if (version === generation.current) setLoading(false);
     }
-  }, [mode, userId]);
+  }, [mode, userId, invalidateHistory]);
   useEffect(() => {
     if (!authReady || seed) return;
     const timer = setTimeout(() => void refresh(), 0);
@@ -240,6 +251,7 @@ function WorkspaceContent({
         ...rows.filter((row) => row.id !== entry.id),
       ]);
       setToday(dayKey());
+      invalidateHistory();
       setError("");
       setLoading(false);
       return;
@@ -261,6 +273,7 @@ function WorkspaceContent({
       generation.current++;
       setEntries((rows) => rows.filter((row) => row.id !== id));
       setToday(dayKey());
+      invalidateHistory();
       setError("");
       setLoading(false);
       return;
@@ -269,7 +282,18 @@ function WorkspaceContent({
   }
   return (
     <Context.Provider
-      value={{ entries, loading, error, mode, today, refresh, add, remove }}
+      value={{
+        entries,
+        loading,
+        error,
+        mode,
+        today,
+        historyPages,
+        historyVersion,
+        refresh,
+        add,
+        remove,
+      }}
     >
       <div className="app-shell">
         {(mode === "demo" ||

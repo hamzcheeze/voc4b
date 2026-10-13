@@ -79,7 +79,7 @@ it("scopes list and duplicate reads to the authenticated owner", async () => {
     serviceClient("https://test.supabase.co", "server-secret"),
     owner,
   );
-  expect(await repository.list()).toEqual([]);
+  expect(await repository.listToday("2026-10-13")).toEqual([]);
   expect(await repository.hasWord("ought")).toBe(false);
   for (const call of fetcher.mock.calls)
     expect(
@@ -87,4 +87,44 @@ it("scopes list and duplicate reads to the authenticated owner", async () => {
         call[0] instanceof Request ? call[0].url : call[0],
       ).searchParams.get("user_id"),
     ).toBe(`eq.${owner}`);
+});
+
+it("fetches one filtered History page with a total count", async () => {
+  const fetcher = vi.fn<typeof fetch>(
+    async () =>
+      new Response(JSON.stringify([vocabulary]), {
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Range": "40-40/81",
+        },
+      }),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const repository = new SupabaseRepository(
+    serviceClient("https://test.supabase.co", "server-secret"),
+    "00000000-0000-4000-8000-000000000001",
+  );
+  expect(
+    await repository.listHistoryPage({
+      page: 2,
+      period: "month",
+      value: "2026-10",
+      order: "desc",
+    }),
+  ).toEqual({ entries: [vocabulary], total: 81 });
+  const [input, options] = fetcher.mock.calls[0];
+  const url = new URL(input instanceof Request ? input.url : input);
+  expect(url.searchParams.get("user_id")).toBe(
+    "eq.00000000-0000-4000-8000-000000000001",
+  );
+  expect(url.searchParams.getAll("day")).toEqual([
+    "gte.2026-10-01",
+    "lte.2026-10-31",
+  ]);
+  expect(url.searchParams.get("order")).toBe(
+    "day.desc,created_at.desc,word.desc,id.desc",
+  );
+  expect(url.searchParams.get("offset")).toBe("40");
+  expect(url.searchParams.get("limit")).toBe("40");
+  expect(new Headers(options?.headers).get("Prefer")).toContain("count=exact");
 });

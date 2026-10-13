@@ -43,7 +43,7 @@ export default async function RootLayout({
         ),
         z.uuid().parse(userId),
       );
-      const entries = await repository.list();
+      const entries = await repository.listToday(dayKey());
       initialSnapshot = {
         kind: "loaded",
         userId,

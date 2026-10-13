@@ -689,6 +689,25 @@ dialog input {
   font-size: 14px;
   border-top: 1px solid var(--line);
 }
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 24px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.history-pagination button {
+  min-width: 82px;
+  padding: 8px 12px;
+  border: 1px solid var(--control-line);
+  border-radius: 6px;
+}
+.history-pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .auth-panel,
 .setup-panel {
   max-width: 380px;

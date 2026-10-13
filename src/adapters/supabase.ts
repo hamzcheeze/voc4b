@@ -7,6 +7,10 @@ import type {
 } from "../application/import-historical-word";
 import { z } from "zod";
 import {
+  HISTORY_PAGE_SIZE,
+  type HistoryQuery,
+} from "../application/history-query";
+import {
   vocabularySchema,
   DUPLICATE_WORD_MESSAGE,
   type DictionaryEntry,
@@ -35,6 +39,11 @@ export function serviceClient(url: string, key: string): SupabaseClient {
       detectSessionInUrl: false,
     },
   });
+}
+function lastDayOfMonth(value: string): string {
+  const date = new Date(0);
+  date.setUTCFullYear(Number(value.slice(0, 4)), Number(value.slice(5, 7)), 0);
+  return date.toISOString().slice(0, 10);
 }
 export class SupabaseRepository implements VocabularyRepository {
   constructor(
@@ -149,25 +158,53 @@ export class SupabaseRepository implements VocabularyRepository {
       throw databaseError(error, "Couldn't remove the word. Please try again.");
     return z.boolean().parse(data);
   }
-  async list(): Promise<Vocabulary[]> {
-    // Paginate to avoid the default PostgREST 1000-row truncation (500 learning days).
-    const result: Vocabulary[] = [];
-    for (let offset = 0; ; offset += 500) {
-      const { data, error } = await this.client
-        .from("vocabulary")
-        .select("id,word,day,created_at,content")
-        .eq("user_id", this.userId)
-        .order("day", { ascending: false })
-        .order("created_at", { ascending: false })
-        .order("id")
-        .range(offset, offset + 499);
-      if (error)
-        throw databaseError(
-          error,
-          "Couldn't load your words. Please try again.",
+  async listToday(day: string): Promise<Vocabulary[]> {
+    const { data, error } = await this.client
+      .from("vocabulary")
+      .select("id,word,day,created_at,content")
+      .eq("user_id", this.userId)
+      .eq("day", day)
+      .order("created_at", { ascending: false });
+    if (error) throw databaseError(error, "Couldn't load today's words.");
+    return z.array(vocabularySchema).parse(data);
+  }
+  async listHistoryPage(
+    query: HistoryQuery,
+  ): Promise<{ entries: Vocabulary[]; total: number }> {
+    let request = this.client
+      .from("vocabulary")
+      .select("id,word,day,created_at,content", { count: "exact" })
+      .eq("user_id", this.userId);
+    if (query.value) {
+      if (query.period === "date") request = request.eq("day", query.value);
+      else if (query.period === "month" || query.period === "year") {
+        request = request.gte(
+          "day",
+          `${query.value}${query.period === "year" ? "-01-01" : "-01"}`,
         );
-      result.push(...z.array(vocabularySchema).parse(data));
-      if (data.length < 500) return result;
+        const last =
+          query.period === "year"
+            ? `${query.value}-12-31`
+            : lastDayOfMonth(query.value);
+        request = request.lte("day", last);
+      }
     }
+    const ascending = query.order === "asc";
+    const offset = (query.page - 1) * HISTORY_PAGE_SIZE;
+    const { data, count, error } = await request
+      .order("day", { ascending })
+      .order("created_at", { ascending })
+      .order("word", { ascending })
+      .order("id", { ascending })
+      .range(offset, offset + HISTORY_PAGE_SIZE - 1);
+    if (error)
+      throw databaseError(
+        error,
+        "Couldn't load your history. Please try again.",
+      );
+    return {
+      entries: z.array(vocabularySchema).parse(data),
+      total: count ?? 0,
+    };
   }
 }

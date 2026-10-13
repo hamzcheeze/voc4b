@@ -1,6 +1,7 @@
 import { it, expect, vi, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { DELETE, GET, POST } from "../src/app/api/words/route";
+import { GET as GET_HISTORY } from "../src/app/api/history/route";
 const authentication = vi.hoisted(() => ({ auth: vi.fn(async () => null) }));
 vi.mock("../src/auth", () => ({ auth: authentication.auth }));
 afterEach(() => {
@@ -11,6 +12,14 @@ it("production missing configuration is explicit 503", async () => {
   vi.stubEnv("APP_MODE", "live");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
   expect((await GET()).status).toBe(503);
+});
+it("rejects an invalid History filter before querying", async () => {
+  const response = await GET_HISTORY(
+    new NextRequest(
+      "http://localhost:3000/api/history?period=month&value=2026-13",
+    ),
+  );
+  expect(response.status).toBe(400);
 });
 it("requires a server session before dictionary work", async () => {
   vi.stubEnv("APP_MODE", "live");

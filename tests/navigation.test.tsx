@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { Workspace } from "../src/components/workspace";
@@ -39,7 +40,18 @@ vi.mock("next-auth/react", () => ({
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
-  vi.stubGlobal("fetch", vi.fn());
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            entries: [{ ...vocabulary, day: dayKey() }],
+            total: 1,
+          }),
+        ),
+    ),
+  );
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal(
     "matchMedia",
@@ -79,13 +91,13 @@ function mount() {
   );
 }
 
-it("switches Today and History using saved data without any network request", () => {
+it("loads History separately and keeps Today available when navigating back", async () => {
   mount();
   expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
   fireEvent.click(screen.getByRole("link", { name: "History" }));
   expect(window.location.pathname).toBe("/history");
   expect(screen.getByRole("heading", { name: "History" })).toBeVisible();
-  expect(screen.getByRole("heading", { name: "ought" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
   expect(screen.getByRole("link", { name: "History" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -93,19 +105,50 @@ it("switches Today and History using saved data without any network request", ()
   fireEvent.click(screen.getByRole("link", { name: "Today" }));
   expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
   expect(window.location.pathname).toBe("/");
-  expect(fetch).not.toHaveBeenCalled();
+  expect(fetch).toHaveBeenCalledTimes(1);
 });
 
-it("renders a direct History URL and responds to browser history changes", () => {
+it("renders a direct History URL and responds to browser history changes", async () => {
   window.history.replaceState(null, "", "/history");
   mount();
   expect(screen.getByRole("heading", { name: "History" })).toBeVisible();
+  await screen.findByRole("heading", { name: "ought" });
   act(() => {
     window.history.replaceState(null, "", "/");
     window.dispatchEvent(new PopStateEvent("popstate"));
   });
   expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
-  expect(fetch).not.toHaveBeenCalled();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it("prefetches the next History page and reuses cached pages", async () => {
+  vi.mocked(fetch).mockImplementation(async (input) => {
+    const requested = new URL(String(input), "http://localhost:3000");
+    const page = Number(requested.searchParams.get("page"));
+    return new Response(
+      JSON.stringify({
+        entries: [
+          {
+            ...vocabulary,
+            id: `page-${page}`,
+            word: `page${page}`,
+            day: dayKey(),
+          },
+        ],
+        total: 81,
+      }),
+    );
+  });
+  window.history.replaceState(null, "", "/history");
+  mount();
+  expect(await screen.findByRole("heading", { name: "page1" })).toBeVisible();
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(await screen.findByRole("heading", { name: "page2" })).toBeVisible();
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+  fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+  expect(await screen.findByRole("heading", { name: "page1" })).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(3);
 });
 
 it.each([

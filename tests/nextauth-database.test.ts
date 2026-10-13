@@ -34,12 +34,23 @@ async function bootstrap() {
 beforeAll(async () => {
   db = await bootstrap();
   await db.exec(migration);
+  await db.exec(
+    readFileSync("supabase/migrations/006_history_pagination.sql", "utf8"),
+  );
 }, 30000);
 afterAll(async () => {
   if (db) await db.close();
 });
 afterEach(async () => {
   await db.exec("reset role; truncate public.vocabulary;");
+});
+it("indexes owner-scoped History order", async () => {
+  const result = await db.query<{ indexdef: string }>(
+    "select indexdef from pg_indexes where schemaname='public' and indexname='vocabulary_history_page'",
+  );
+  expect(result.rows[0].indexdef).toContain(
+    "(user_id, day DESC, created_at DESC, word DESC, id DESC)",
+  );
 });
 async function service() {
   await db.exec("reset role; set role service_role;");

@@ -20,8 +20,9 @@ Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and
 3. Run `supabase/migrations/003_unique_words.sql` to prevent saving a word already in your library on any earlier day. Existing entries are preserved.
 4. Run `supabase/migrations/004_remove_today_word.sql` to allow removing one of today's words and filling its slot with another word.
 5. Run `supabase/migrations/005_nextauth.sql`. It preserves existing vocabulary and user IDs while moving account and session storage to NextAuth.
-6. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
-7. Add these values to `.env.local`:
+6. Run `supabase/migrations/006_history_pagination.sql` to index owner-scoped History pages.
+7. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
+8. Add these values to `.env.local`:
 
 ```dotenv
 APP_MODE=live
@@ -39,7 +40,7 @@ Generate `AUTH_SECRET` with `bun -e 'console.log(require("node:crypto").randomBy
 
 Existing `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` values work as aliases for the Google settings above.
 
-8. Register the provider callbacks below, then restart Next.js. Google needs an OAuth web application. Facebook needs a dedicated development app for localhost and the appropriate app permissions before other people can use it.
+9. Register the provider callbacks below, then restart Next.js. Google needs an OAuth web application. Facebook needs a dedicated development app for localhost and the appropriate app permissions before other people can use it.
 
 | Provider | Local callback                                     |
 | -------- | -------------------------------------------------- |
@@ -57,6 +58,7 @@ For iPhone OAuth testing, use a stable HTTPS domain with registered callbacks. `
 
 Add one English word at a time. `POST /api/words` verifies the NextAuth session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
 `DELETE /api/words?id=...` removes only a word saved today by the signed-in user.
+`GET /api/words` returns today's words. History uses `GET /api/history` with page, period, value, and order parameters. Each response includes up to 40 words and the filtered total.
 
 A failed request, missing word, malformed response, or unrelated redirect leaves today's word slots unchanged. If Simple Wiktionary is unavailable, Cambridge data can still be saved without verb forms. The app skips blank definitions and does not save an entry if no usable definitions remain.
 
