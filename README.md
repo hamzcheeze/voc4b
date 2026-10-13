@@ -21,6 +21,7 @@ Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and
 4. Run `supabase/migrations/004_remove_today_word.sql` to allow removing one of today's words and filling its slot with another word.
 5. Run `supabase/migrations/005_nextauth.sql`. It preserves existing vocabulary and user IDs while moving account and session storage to NextAuth.
 6. Run `supabase/migrations/006_history_pagination.sql` to index owner-scoped History pages.
+7. Run `supabase/migrations/007_thai_meaning.sql` to save personal Thai meanings from the back of each Today card. The function changes only the meaning on a word owned by the signed-in account.
 7. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
 8. Add these values to `.env.local`:
 

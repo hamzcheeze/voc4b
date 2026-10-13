@@ -37,6 +37,12 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("supabase/migrations/006_history_pagination.sql", "utf8"),
   );
+  await db.exec(
+    readFileSync("supabase/migrations/007_thai_meaning.sql", "utf8"),
+  );
+  await db.exec(
+    readFileSync("supabase/migrations/007_thai_meaning.sql", "utf8"),
+  );
 }, 30000);
 afterAll(async () => {
   if (db) await db.close();
@@ -201,4 +207,72 @@ it("refuses unrecognized owners and malformed dictionary payloads", async () => 
     ),
   ).rejects.toThrow("invalid_entry");
   expect((await db.query("select * from public.vocabulary")).rows).toEqual([]);
+});
+
+it("updates only the owner's annotation and preserves dictionary, slots and dates", async () => {
+  await service();
+  const saved = (await save()).rows[0];
+  await save(alice, "rescind");
+  const before = (
+    await db.query<Record<string, unknown>>(
+      "select * from public.vocabulary where id=$1",
+      [saved.id],
+    )
+  ).rows[0];
+  const result = await db.query<{ content: unknown }>(
+    "select * from public.update_vocabulary_meaning($1::uuid,$2::uuid,$3)",
+    [alice, saved.id, "  ควร  "],
+  );
+  expect(result.rows[0].content).toEqual({
+    kind: "dictionary",
+    entry: { ...dictionaryEntry, headword: "ought" },
+    thaiMeaning: "ควร",
+  });
+  expect(
+    (
+      await db.query<Record<string, unknown>>(
+        "select * from public.vocabulary where id=$1",
+        [saved.id],
+      )
+    ).rows[0],
+  ).toEqual({
+    ...before,
+    content: {
+      kind: "dictionary",
+      entry: { ...dictionaryEntry, headword: "ought" },
+      thaiMeaning: "ควร",
+    },
+  });
+  expect(
+    (
+      await db.query(
+        "select * from public.update_vocabulary_meaning($1::uuid,$2::uuid,$3)",
+        [bob, saved.id, "wrong owner"],
+      )
+    ).rows,
+  ).toEqual([]);
+  expect(
+    (
+      await db.query(
+        "select public.vocabulary_today_count($1::uuid) as count",
+        [alice],
+      )
+    ).rows,
+  ).toEqual([{ count: 2 }]);
+  for (const invalid of ["", "  ", "a".repeat(601), "bad\nmeaning"])
+    await expect(
+      db.query(
+        "select * from public.update_vocabulary_meaning($1::uuid,$2::uuid,$3)",
+        [alice, saved.id, invalid],
+      ),
+    ).rejects.toThrow(/invalid_meaning/);
+  for (const role of ["anon", "authenticated"]) {
+    await db.exec(`reset role; set role ${role}`);
+    await expect(
+      db.query(
+        "select * from public.update_vocabulary_meaning($1::uuid,$2::uuid,$3)",
+        [alice, saved.id, "ควร"],
+      ),
+    ).rejects.toThrow(/permission denied/);
+  }
 });

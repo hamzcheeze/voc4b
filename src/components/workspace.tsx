@@ -24,6 +24,7 @@ import type { AppMode } from "../application/config";
 import {
   dayKey,
   vocabularySchema,
+  thaiMeaningSchema,
   type Vocabulary,
 } from "../domain/vocabulary";
 import { demoStore } from "../adapters/demo";
@@ -43,6 +44,7 @@ interface WorkspaceState {
   refresh: () => Promise<void>;
   add: (word: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  updateMeaning: (id: string, meaning: string) => Promise<void>;
 }
 const Context = createContext<WorkspaceState | null>(null);
 export function useWorkspace() {
@@ -258,6 +260,26 @@ function WorkspaceContent({
     }
     await refresh();
   }
+  async function updateMeaning(id: string, input: string) {
+    const meaning = thaiMeaningSchema.parse(input);
+    let entry: Vocabulary;
+    if (mode === "demo") entry = await demoStore.updateMeaning(id, meaning);
+    else {
+      if (!userId) throw new Error("Please sign in again.");
+      const response = await fetch("/api/words", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, thaiMeaning: meaning }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      entry = vocabularySchema.parse(data.entry);
+    }
+    setEntries((rows) =>
+      rows.map((row) => (row.id === entry.id ? entry : row)),
+    );
+    invalidateHistory();
+  }
   async function remove(id: string) {
     if (mode === "demo") await demoStore.removeToday(id);
     else {
@@ -293,6 +315,7 @@ function WorkspaceContent({
         refresh,
         add,
         remove,
+        updateMeaning,
       }}
     >
       <div className="app-shell">

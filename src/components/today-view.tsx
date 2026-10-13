@@ -9,8 +9,17 @@ import {
   type Vocabulary,
 } from "../domain/vocabulary";
 export default function TodayView() {
-  const { entries, loading, error, today, refresh, add, remove, mode } =
-    useWorkspace();
+  const {
+    entries,
+    loading,
+    error,
+    today,
+    refresh,
+    add,
+    remove,
+    updateMeaning,
+    mode,
+  } = useWorkspace();
   const [word, setWord] = useState("");
   const [submission, setSubmission] = useState<
     { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string }
@@ -180,6 +189,7 @@ export default function TodayView() {
           )}
           <TodayWords
             entries={words}
+            onUpdateMeaning={updateMeaning}
             onRemove={(entry) => setRemoveTarget(entry)}
           />
         </>

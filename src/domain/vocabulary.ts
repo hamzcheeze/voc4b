@@ -117,6 +117,12 @@ export const dictionaryEntrySchema = z
   })
   .strict();
 export type DictionaryEntry = z.infer<typeof dictionaryEntrySchema>;
+export const thaiMeaningSchema = z
+  .string()
+  .regex(/^[^\p{Cc}]*$/u, "Control characters are not allowed.")
+  .trim()
+  .min(1, "Enter a Thai meaning.")
+  .max(600, "Use up to 600 characters.");
 export const vocabularySchema = z.object({
   id: z.string().min(1),
   word: z.string().min(1).max(80),
@@ -124,11 +130,16 @@ export const vocabularySchema = z.object({
   created_at: z.string().optional(),
   content: z.discriminatedUnion("kind", [
     z
-      .object({ kind: z.literal("dictionary"), entry: dictionaryEntrySchema })
+      .object({
+        kind: z.literal("dictionary"),
+        entry: dictionaryEntrySchema,
+        thaiMeaning: thaiMeaningSchema.optional(),
+      })
       .strict(),
     z
       .object({
         kind: z.literal("legacy"),
+        thaiMeaning: thaiMeaningSchema.optional(),
         explanation: z.string(),
         syllables: z.array(syllableSchema),
       })

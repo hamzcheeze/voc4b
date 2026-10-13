@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   dayKey,
+  thaiMeaningSchema,
   DUPLICATE_WORD_MESSAGE,
   validateWord,
   vocabularySchema,
@@ -127,6 +128,24 @@ function removeToday(id: string): void {
     throw new Error("Your browser blocked demo storage.");
   }
 }
+function updateMeaning(id: string, meaning: string): Vocabulary {
+  const rows = list();
+  const row = rows.find((row) => row.id === id);
+  if (!row) throw new Error("This word is no longer in your library.");
+  const updated: Vocabulary = {
+    ...row,
+    content: { ...row.content, thaiMeaning: meaning },
+  };
+  try {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(rows.map((row) => (row.id === id ? updated : row))),
+    );
+  } catch {
+    throw new Error("Your browser blocked demo storage.");
+  }
+  return updated;
+}
 export const demoStore = {
   list,
   async add(input: string): Promise<Vocabulary> {
@@ -139,6 +158,12 @@ export const demoStore = {
     if (typeof navigator !== "undefined" && navigator.locks)
       return navigator.locks.request(KEY, () => removeToday(id));
     removeToday(id);
+  },
+  async updateMeaning(id: string, input: string): Promise<Vocabulary> {
+    const meaning = thaiMeaningSchema.parse(input);
+    if (typeof navigator !== "undefined" && navigator.locks)
+      return navigator.locks.request(KEY, () => updateMeaning(id, meaning));
+    return updateMeaning(id, meaning);
   },
   reset() {
     localStorage.removeItem(KEY);

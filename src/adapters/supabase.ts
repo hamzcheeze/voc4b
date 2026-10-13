@@ -149,6 +149,20 @@ export class SupabaseRepository implements VocabularyRepository {
     }
     return z.array(vocabularySchema).length(1).parse(data)[0];
   }
+  async updateMeaning(id: string, meaning: string): Promise<Vocabulary | null> {
+    const { data, error } = await this.client.rpc("update_vocabulary_meaning", {
+      p_user_id: this.userId,
+      p_id: id,
+      p_meaning: meaning,
+    });
+    if (error)
+      throw databaseError(
+        error,
+        "Couldn't save the meaning. Please try again.",
+      );
+    const rows = z.array(vocabularySchema).max(1).parse(data);
+    return rows[0] ?? null;
+  }
   async removeToday(id: string): Promise<boolean> {
     const { data, error } = await this.client.rpc("delete_vocabulary_today", {
       p_user_id: this.userId,

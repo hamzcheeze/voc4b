@@ -1093,3 +1093,125 @@ dialog input {
   white-space: nowrap;
   border: 0;
 }
+
+.flip-card {
+  position: relative;
+  perspective: 1400px;
+  min-width: 0;
+}
+.flip-card-rotor {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(0.22, 0.68, 0, 1);
+}
+.flip-card[data-face="back"] .flip-card-rotor {
+  transform: rotateY(180deg);
+}
+.flip-card-face {
+  grid-area: 1 / 1;
+  min-width: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-card-front {
+  display: flex;
+}
+.flip-card-front > .today-word-card {
+  width: 100%;
+  padding-bottom: 64px;
+}
+.flip-card-back {
+  display: grid;
+  place-items: center;
+  min-height: 210px;
+  padding: 42px 36px 66px;
+  background: var(--surface);
+  border: 1px solid var(--control-line);
+  border-left: 6px solid var(--ink);
+  border-radius: 12px;
+  transform: rotateY(180deg);
+}
+.card-flip-button {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  border-radius: 6px;
+}
+.card-flip-button:hover,
+.meaning-add:hover {
+  color: var(--ink);
+  background: var(--hover);
+}
+.meaning-editor {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
+.meaning-add {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  color: var(--muted);
+  border-radius: 6px;
+}
+.saved-thai-meaning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.saved-thai-meaning p {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.saved-thai-meaning .icon-button {
+  flex-shrink: 0;
+}
+.meaning-editor input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  text-align: center;
+  border: 1px solid var(--control-line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 10px 14px;
+  font: inherit;
+}
+.meaning-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+@media (max-width: 640px) {
+  .flip-card-front > .word-card.today-word-card {
+    padding-bottom: 62px;
+  }
+  .flip-card-back {
+    padding: 32px 20px 62px;
+  }
+  .card-flip-button {
+    right: 12px;
+    bottom: 14px;
+  }
+  .saved-thai-meaning p {
+    font-size: 21px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-card-rotor {
+    transition: none;
+  }
+}

@@ -1,7 +1,8 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import {
   remainingSlots,
+  thaiMeaningSchema,
   type Vocabulary,
   type DictionaryEntry,
 } from "../domain/vocabulary";
@@ -11,11 +12,13 @@ export function WordCard({
   headingLevel = 2,
   onRemove,
   todayPosition,
+  active = true,
 }: {
   entry: Vocabulary;
   headingLevel?: 2 | 3;
   onRemove?: () => void;
   todayPosition?: number;
+  active?: boolean;
 }) {
   const Heading = headingLevel === 3 ? "h3" : "h2";
   const content = entry.content;
@@ -102,7 +105,11 @@ export function WordCard({
             </p>
           )}
         {preferred && (
-          <Pronunciation word={entry.word} pronunciation={preferred} />
+          <Pronunciation
+            word={entry.word}
+            pronunciation={preferred}
+            active={active}
+          />
         )}
       </div>
       <div className="word-content">
@@ -132,7 +139,12 @@ export function WordCard({
             {pronunciations
               .filter((p) => p !== preferred)
               .map((p, i) => (
-                <Pronunciation key={i} word={entry.word} pronunciation={p} />
+                <Pronunciation
+                  key={i}
+                  word={entry.word}
+                  pronunciation={p}
+                  active={active}
+                />
               ))}
           </details>
         )}
@@ -188,13 +200,21 @@ function Sense({
 function Pronunciation({
   word,
   pronunciation,
+  active = true,
 }: {
   word: string;
   pronunciation: DictionaryEntry["pronunciations"][number];
+  active?: boolean;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false),
     [error, setError] = useState(false);
+  const visible = useRef(active);
+  useEffect(() => {
+    visible.current = active;
+    if (!active && audio.current && !audio.current.paused)
+      audio.current.pause();
+  }, [active]);
   async function toggle() {
     if (!audio.current) return;
     if (playing) {
@@ -205,6 +225,10 @@ function Pronunciation({
     setError(false);
     try {
       await audio.current.play();
+      if (!visible.current) {
+        audio.current.pause();
+        return;
+      }
       setPlaying(true);
     } catch {
       setError(true);
@@ -230,6 +254,7 @@ function Pronunciation({
             ref={audio}
             src={pronunciation.audioUrl}
             preload="none"
+            onPause={() => setPlaying(false)}
             onEnded={() => setPlaying(false)}
             onError={() => {
               setPlaying(false);
@@ -249,9 +274,11 @@ function Pronunciation({
 export function TodayWords({
   entries,
   onRemove,
+  onUpdateMeaning,
 }: {
   entries: Vocabulary[];
   onRemove: (entry: Vocabulary) => void;
+  onUpdateMeaning?: (id: string, meaning: string) => Promise<void>;
 }) {
   return (
     <div className="word-list today-word-list">
@@ -260,14 +287,208 @@ export function TodayWords({
           <span>You've reached today's two-word limit.</span>
         </div>
       )}
-      {entries.map((entry, index) => (
-        <WordCard
-          key={entry.id}
-          entry={entry}
-          todayPosition={index + 1}
-          onRemove={() => onRemove(entry)}
-        />
-      ))}
+      {entries.map((entry, index) =>
+        onUpdateMeaning ? (
+          <FlippableWordCard
+            key={entry.id}
+            entry={entry}
+            todayPosition={index + 1}
+            onRemove={() => onRemove(entry)}
+            onSave={onUpdateMeaning}
+          />
+        ) : (
+          <WordCard
+            key={entry.id}
+            entry={entry}
+            todayPosition={index + 1}
+            onRemove={() => onRemove(entry)}
+          />
+        ),
+      )}
+    </div>
+  );
+}
+
+type MeaningEditor =
+  | { kind: "view" }
+  | { kind: "editing"; draft: string }
+  | { kind: "saving"; draft: string }
+  | { kind: "error"; draft: string; message: string };
+export function FlippableWordCard({
+  entry,
+  todayPosition,
+  onRemove,
+  onSave,
+}: {
+  entry: Vocabulary;
+  todayPosition: number;
+  onRemove: () => void;
+  onSave: (id: string, meaning: string) => Promise<void>;
+}) {
+  const [face, setFace] = useState<"front" | "back">("front");
+  const [editor, setEditor] = useState<MeaningEditor>({ kind: "view" });
+  const input = useRef<HTMLInputElement>(null);
+  const flip = useRef<HTMLButtonElement>(null);
+  const saving = useRef(false);
+  const composing = useRef(false);
+  const id = useId();
+  const meaning = entry.content.thaiMeaning;
+  function edit() {
+    setEditor({ kind: "editing", draft: meaning ?? "" });
+    requestAnimationFrame(() => input.current?.focus());
+  }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (editor.kind === "view" || saving.current || composing.current) return;
+    const draft = editor.draft;
+    const parsed = thaiMeaningSchema.safeParse(draft);
+    if (!parsed.success) {
+      setEditor({
+        kind: "error",
+        draft,
+        message: parsed.error.issues[0].message,
+      });
+      return;
+    }
+    saving.current = true;
+    setEditor({ kind: "saving", draft });
+    try {
+      await onSave(entry.id, parsed.data);
+      setEditor({ kind: "view" });
+      requestAnimationFrame(() => flip.current?.focus());
+    } catch (error) {
+      setEditor({
+        kind: "error",
+        draft,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Couldn't save the meaning. Please try again.",
+      });
+      requestAnimationFrame(() => input.current?.focus());
+    } finally {
+      saving.current = false;
+    }
+  }
+  return (
+    <div className="flip-card" data-face={face}>
+      <div className="flip-card-rotor">
+        <div
+          className="flip-card-face flip-card-front"
+          inert={face === "back"}
+          aria-hidden={face === "back"}
+        >
+          <WordCard
+            entry={entry}
+            todayPosition={todayPosition}
+            onRemove={onRemove}
+            active={face === "front"}
+          />
+        </div>
+        <div
+          className="flip-card-face flip-card-back"
+          inert={face === "front"}
+          aria-hidden={face === "front"}
+        >
+          <div className="meaning-editor">
+            {editor.kind === "view" ? (
+              meaning ? (
+                <div className="saved-thai-meaning">
+                  <p lang="th">{meaning}</p>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={`Edit Thai meaning for ${entry.word}`}
+                    onClick={edit}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="meaning-add" onClick={edit}>
+                  <Icon name="plus" />
+                  <span>Add a word</span>
+                </button>
+              )
+            ) : (
+              <form
+                onSubmit={submit}
+                aria-label={`Thai meaning for ${entry.word}`}
+                aria-busy={editor.kind === "saving"}
+              >
+                <label htmlFor={id} className="sr-only">
+                  Thai meaning for {entry.word}
+                </label>
+                <input
+                  ref={input}
+                  id={id}
+                  lang="th"
+                  autoComplete="off"
+                  placeholder="เพิ่มความหมายภาษาไทย"
+                  value={editor.draft}
+                  maxLength={600}
+                  required
+                  disabled={editor.kind === "saving"}
+                  aria-invalid={editor.kind === "error"}
+                  aria-describedby={
+                    editor.kind === "error" ? `${id}-error` : `${id}-hint`
+                  }
+                  onCompositionStart={() => {
+                    composing.current = true;
+                  }}
+                  onCompositionEnd={() => {
+                    composing.current = false;
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      (event.nativeEvent.isComposing ||
+                        composing.current ||
+                        event.keyCode === 229)
+                    )
+                      event.preventDefault();
+                    if (event.key === "Escape" && editor.kind !== "saving") {
+                      setEditor({ kind: "view" });
+                      flip.current?.focus();
+                    }
+                  }}
+                  onChange={(event) =>
+                    setEditor({ kind: "editing", draft: event.target.value })
+                  }
+                />
+                <p id={`${id}-hint`} className="meaning-hint">
+                  {editor.kind === "saving" ? (
+                    <span role="status">Saving…</span>
+                  ) : (
+                    "Press Enter to save"
+                  )}
+                </p>
+                {editor.kind === "error" && (
+                  <p id={`${id}-error`} role="alert" className="error">
+                    {editor.message}
+                  </p>
+                )}
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+      <button
+        ref={flip}
+        type="button"
+        className="card-flip-button"
+        aria-label={`Flip ${entry.word} card`}
+        aria-pressed={face === "back"}
+        disabled={editor.kind === "saving"}
+        onClick={() => {
+          flip.current?.focus();
+          setFace((face) => (face === "front" ? "back" : "front"));
+          setEditor({ kind: "view" });
+        }}
+      >
+        <Icon name="flip" />
+        <span>Flip</span>
+      </button>
     </div>
   );
 }

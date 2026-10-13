@@ -50,9 +50,12 @@ function session(id = "first"): Session {
   };
 }
 function Controls() {
-  const { refresh, add, remove } = useWorkspace();
+  const { refresh, add, remove, updateMeaning } = useWorkspace();
   return (
     <>
+      <button onClick={() => void updateMeaning("1", "ควร")}>
+        Save test meaning
+      </button>
       <button onClick={() => void refresh()}>Refresh test data</button>
       <button onClick={() => void add("rescind")}>Add test word</button>
       <button onClick={() => void remove("1")}>Remove test word</button>
@@ -329,4 +332,37 @@ it("removes a confirmed word locally without letting an older load restore it", 
     screen.queryByRole("heading", { name: "ought" }),
   ).not.toBeInTheDocument();
   expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("a concurrent addition does not discard a saved meaning or reload unrelated cards", async () => {
+  const pending = Promise.withResolvers<Response>();
+  const added = { ...saved, id: "new-word", word: "rescind" };
+  const updated = {
+    ...saved,
+    content: { ...saved.content, thaiMeaning: "ควร" },
+  };
+  const fetcher = vi.fn((_url: RequestInfo | URL, options?: RequestInit) =>
+    options?.method === "PATCH"
+      ? pending.promise
+      : Promise.resolve(
+          new Response(JSON.stringify({ entry: added }), { status: 201 }),
+        ),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  mount({ kind: "loaded", userId: "first", today: dayKey(), entries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Save test meaning" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add test word" }));
+  expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
+  const unrelated = screen.getByRole("heading", { name: "rescind" });
+  await act(async () => {
+    pending.resolve(new Response(JSON.stringify({ entry: updated })));
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Flip ought card" }));
+  expect(screen.getByText("ควร")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "rescind" })).toBe(unrelated);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(fetcher.mock.calls.map((call) => call[1]?.method)).toEqual([
+    "PATCH",
+    "POST",
+  ]);
 });

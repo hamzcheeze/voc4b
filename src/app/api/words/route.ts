@@ -11,6 +11,7 @@ import {
 } from "../../../application/import-historical-word";
 import {
   DAILY_LIMIT,
+  thaiMeaningSchema,
   dayKey,
   validateDictionaryTerm,
   validateWord,
@@ -171,6 +172,42 @@ export async function DELETE(request: NextRequest) {
     if (!removed)
       throw new ApiError("This word is no longer in today's list.", 404);
     return new NextResponse(null, { status: 204, headers });
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    assertSameOrigin(request);
+    if (Number(request.headers.get("content-length") || 0) > 4096)
+      throw new ApiError("Request is too large.", 413);
+    const { repo } = await authenticatedRepository();
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > 4096)
+      throw new ApiError("Request is too large.", 413);
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new ApiError("Invalid request format.", 400);
+    }
+    const parsed = z
+      .object({ id: z.string().uuid(), thaiMeaning: thaiMeaningSchema })
+      .strict()
+      .safeParse(body);
+    if (!parsed.success)
+      throw new ApiError(
+        "Enter a meaning of 1–600 characters for a saved word.",
+        400,
+      );
+    const entry = await repo.updateMeaning(
+      parsed.data.id,
+      parsed.data.thaiMeaning,
+    );
+    if (!entry)
+      throw new ApiError("This word is no longer in your library.", 404);
+    return NextResponse.json({ entry }, { headers });
   } catch (error) {
     return failure(error);
   }

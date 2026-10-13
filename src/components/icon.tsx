@@ -1,5 +1,9 @@
 import React from "react";
 const paths = {
+  flip: (
+    <path d="M4 9a8 8 0 0 1 13-4l3 3M20 3v5h-5M20 15a8 8 0 0 1-13 4l-3-3M4 21v-5h5" />
+  ),
+  pencil: <path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6Z" />,
   plus: <path suppressHydrationWarning d="M12 5v14M5 12h14" />,
   check: <path suppressHydrationWarning d="m5 12 4 4L19 6" />,
   arrow: <path suppressHydrationWarning d="M5 12h14m-6-6 6 6-6 6" />,
