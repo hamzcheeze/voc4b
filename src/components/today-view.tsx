@@ -46,7 +46,7 @@ export default function TodayView() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ word: candidate }),
-      }).catch(() => {});
+      }).catch(() => { });
     }, 650);
     return () => clearTimeout(timer);
   }, [mode, busy, loading, word, entries, words.length]);
@@ -157,8 +157,7 @@ export default function TodayView() {
                 className="add-card"
                 disabled={busy || !word.trim()}
               >
-                {!busy && <Icon name="plus" />}
-                <span>{busy ? "Saving…" : "Add a word"}</span>
+                <span>{busy ? "Saving…" : "Add"}</span>
               </button>
               {mode === "demo" && (
                 <p className="input-hint">Try: rescind, serene, lucid</p>
