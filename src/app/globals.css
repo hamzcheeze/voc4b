@@ -718,6 +718,159 @@ dialog input {
   color: var(--muted);
   line-height: 1.9;
 }
+.today-heading {
+  align-items: center;
+  margin-bottom: 44px;
+}
+.today-heading h1 {
+  font-size: 56px;
+  font-weight: 650;
+  letter-spacing: -2px;
+}
+.today-progress {
+  width: 255px;
+  padding: 18px 20px;
+  border: 1px solid var(--control-line);
+  border-radius: 13px;
+  background: var(--surface);
+  white-space: normal;
+}
+.today-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.today-progress-label {
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.today-progress-count {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.today-progress progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 7px;
+  margin: 12px 0 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--ink);
+}
+.today-progress progress::-webkit-progress-bar {
+  background: var(--line);
+}
+.today-progress progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--ink);
+}
+.today-progress progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--ink);
+}
+.today-progress p {
+  font-size: 12px;
+  margin: 0;
+}
+.today-word-list {
+  gap: 16px;
+}
+.word-card.today-word-card {
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 12px;
+  padding: 26px 58px 26px 28px;
+  border: 1px solid var(--control-line);
+  border-left: 6px solid var(--ink);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.today-word-card .word-number {
+  grid-column: 1;
+  grid-row: 1;
+  padding-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.today-word-card .word-identity {
+  grid-column: 2;
+}
+.today-word-card .word-title {
+  font-size: 36px;
+  font-weight: 650;
+  letter-spacing: -1px;
+}
+.today-word-card .word-content {
+  grid-column: 2;
+}
+.today-word-card .word-remove {
+  top: 24px;
+  right: 18px;
+}
+.today-word-card .definition + .definition {
+  margin-top: 14px;
+}
+.today-word-card .part-of-speech {
+  color: var(--ink);
+  display: inline-block;
+  padding: 1px 8px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  background: var(--hover);
+}
+.today-word-card .dictionary-details {
+  color: var(--muted);
+}
+.today-word-card .dictionary-details .definition > p:not(.part-of-speech) {
+  font-size: 14px;
+}
+.today-word-card .dictionary-details .part-of-speech {
+  color: var(--muted);
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+.today-word-card .dictionary-details .definition + .definition {
+  margin-top: 20px;
+}
+.today-word-card .dictionary-details .examples {
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .page-heading.today-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .today-heading h1 {
+    font-size: 42px;
+  }
+  .today-progress {
+    width: 100%;
+  }
+  .word-card.today-word-card {
+    grid-template-columns: 20px minmax(0, 1fr);
+    column-gap: 10px;
+    padding: 22px 42px 22px 16px;
+  }
+  .today-word-card .word-title {
+    font-size: 30px;
+  }
+  .today-word-card .word-remove {
+    top: 20px;
+    right: 8px;
+  }
+}
 @media (max-width: 780px) {
   .masthead {
     padding: 0 28px;

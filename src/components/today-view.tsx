@@ -4,7 +4,6 @@ import { useWorkspace } from "./workspace";
 import { TodayWords } from "./words";
 import { Icon } from "./icon";
 import {
-  dateLabel,
   DUPLICATE_WORD_MESSAGE,
   validateWord,
   type Vocabulary,
@@ -46,7 +45,7 @@ export default function TodayView() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ word: candidate }),
-      }).catch(() => { });
+      }).catch(() => {});
     }, 650);
     return () => clearTimeout(timer);
   }, [mode, busy, loading, word, entries, words.length]);
@@ -99,16 +98,30 @@ export default function TodayView() {
   }
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading today-heading">
         <div>
           <h1>Today</h1>
-          <time dateTime={today}>{dateLabel(today)}</time>
         </div>
         <div
-          className="progress"
+          className="progress today-progress"
           aria-label={`${words.length} of 2 words saved`}
         >
-          <span>{words.length} / 2 words</span>
+          <div className="today-progress-heading">
+            <span className="today-progress-label">Today's words</span>
+            <span className="today-progress-count">
+              {words.length} / 2 words
+            </span>
+          </div>
+          <progress
+            value={words.length}
+            max={2}
+            aria-label="Daily word progress"
+          />
+          <p>
+            {words.length === 2
+              ? "Lovely work. See you tomorrow."
+              : "Two words, one day at a time."}
+          </p>
         </div>
       </div>
       {loading ? (
@@ -123,11 +136,7 @@ export default function TodayView() {
       ) : (
         <>
           {words.length < 2 && (
-            <form
-              className="add-word-form"
-              aria-label="Add"
-              onSubmit={submit}
-            >
+            <form className="add-word-form" aria-label="Add" onSubmit={submit}>
               <label htmlFor="new-word" className="sr-only">
                 Word
               </label>

@@ -10,16 +10,26 @@ export function WordCard({
   entry,
   headingLevel = 2,
   onRemove,
+  todayPosition,
 }: {
   entry: Vocabulary;
   headingLevel?: 2 | 3;
   onRemove?: () => void;
+  todayPosition?: number;
 }) {
   const Heading = headingLevel === 3 ? "h3" : "h2";
   const content = entry.content;
+  const compact = todayPosition !== undefined;
+  const cardClass = compact ? "word-card today-word-card" : "word-card";
+  const number = compact && (
+    <span className="word-number" aria-hidden="true">
+      {String(todayPosition).padStart(2, "0")}
+    </span>
+  );
   if (content.kind === "legacy")
     return (
-      <article className="word-card">
+      <article className={cardClass}>
+        {number}
         {onRemove && (
           <button
             type="button"
@@ -36,11 +46,13 @@ export function WordCard({
             <Heading className="word-title" lang="en">
               {entry.word}
             </Heading>
-            <span className="legacy-label">Legacy entry</span>
+            {!compact && <span className="legacy-label">Legacy entry</span>}
           </div>
-          <p className="legacy-pronunciation" lang="en">
-            {content.syllables.map((s) => s.text).join(" · ")}
-          </p>
+          {!compact && (
+            <p className="legacy-pronunciation" lang="en">
+              {content.syllables.map((s) => s.text).join(" · ")}
+            </p>
+          )}
         </div>
         <div className="word-content">
           <div className="meaning">
@@ -64,7 +76,8 @@ export function WordCard({
     pronunciations.find((p) => p.region === "uk") ||
     pronunciations[0];
   return (
-    <article className="word-card">
+    <article className={cardClass}>
+      {number}
       {onRemove && (
         <button
           type="button"
@@ -82,11 +95,12 @@ export function WordCard({
             {entry.word}
           </Heading>
         </div>
-        {dictionary.headword.toLowerCase() !== entry.word.toLowerCase() && (
-          <p className="canonical-headword" lang="en">
-            {dictionary.headword}
-          </p>
-        )}
+        {!compact &&
+          dictionary.headword.toLowerCase() !== entry.word.toLowerCase() && (
+            <p className="canonical-headword" lang="en">
+              {dictionary.headword}
+            </p>
+          )}
         {preferred && (
           <Pronunciation word={entry.word} pronunciation={preferred} />
         )}
@@ -94,7 +108,11 @@ export function WordCard({
       <div className="word-content">
         <div className="meaning" lang="en">
           {dictionary.definitions.slice(0, 1).map((definition) => (
-            <Sense key={definition.id} definition={definition} />
+            <Sense
+              key={definition.id}
+              definition={definition}
+              showExamples={!compact}
+            />
           ))}
           {dictionary.definitions.length > 1 && (
             <details className="dictionary-details">
@@ -132,28 +150,32 @@ export function WordCard({
             <span className="dictionary-source">Simple Wiktionary</span>
           </details>
         )}
-        <a
-          className="dictionary-source"
-          href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase())}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Cambridge Dictionary
-        </a>
+        {!compact && (
+          <a
+            className="dictionary-source"
+            href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase())}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Cambridge Dictionary
+          </a>
+        )}
       </div>
     </article>
   );
 }
 function Sense({
   definition,
+  showExamples = true,
 }: {
   definition: DictionaryEntry["definitions"][number];
+  showExamples?: boolean;
 }) {
   return (
     <section className="definition">
       {definition.pos && <p className="part-of-speech">{definition.pos}</p>}
       <p>{definition.text}</p>
-      {definition.examples.length > 0 && (
+      {showExamples && definition.examples.length > 0 && (
         <ul className="examples">
           {definition.examples.map((example) => (
             <li key={example.id}>{example.text}</li>
@@ -232,16 +254,17 @@ export function TodayWords({
   onRemove: (entry: Vocabulary) => void;
 }) {
   return (
-    <div className="word-list">
+    <div className="word-list today-word-list">
       {remainingSlots(entries.length) === 0 && (
         <div className="sr-only" role="status">
           <span>You've reached today's two-word limit.</span>
         </div>
       )}
-      {entries.map((entry) => (
+      {entries.map((entry, index) => (
         <WordCard
           key={entry.id}
           entry={entry}
+          todayPosition={index + 1}
           onRemove={() => onRemove(entry)}
         />
       ))}
