@@ -316,14 +316,16 @@ type MeaningEditor =
   | { kind: "error"; draft: string; message: string };
 export function FlippableWordCard({
   entry,
+  headingLevel = 2,
   todayPosition,
   onRemove,
   onSave,
 }: {
   entry: Vocabulary;
-  todayPosition: number;
-  onRemove: () => void;
-  onSave: (id: string, meaning: string) => Promise<void>;
+  headingLevel?: 2 | 3;
+  todayPosition?: number;
+  onRemove?: () => void;
+  onSave?: (id: string, meaning: string) => Promise<void>;
 }) {
   const [face, setFace] = useState<"front" | "back">("front");
   const [editor, setEditor] = useState<MeaningEditor>({ kind: "view" });
@@ -339,7 +341,13 @@ export function FlippableWordCard({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (editor.kind === "view" || saving.current || composing.current) return;
+    if (
+      !onSave ||
+      editor.kind === "view" ||
+      saving.current ||
+      composing.current
+    )
+      return;
     const draft = editor.draft;
     const parsed = thaiMeaningSchema.safeParse(draft);
     if (!parsed.success) {
@@ -380,6 +388,7 @@ export function FlippableWordCard({
         >
           <WordCard
             entry={entry}
+            headingLevel={headingLevel}
             todayPosition={todayPosition}
             onRemove={onRemove}
             active={face === "front"}
@@ -391,24 +400,33 @@ export function FlippableWordCard({
           aria-hidden={face === "front"}
         >
           <div className="meaning-editor">
+            {todayPosition === undefined && (
+              <p className="meaning-word" lang="en">
+                {entry.word}
+              </p>
+            )}
             {editor.kind === "view" ? (
               meaning ? (
                 <div className="saved-thai-meaning">
                   <p lang="th">{meaning}</p>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label={`Edit Thai meaning for ${entry.word}`}
-                    onClick={edit}
-                  >
-                    <Icon name="pencil" />
-                  </button>
+                  {onSave && (
+                    <button
+                      type="button"
+                      className="icon-button"
+                      aria-label={`Edit Thai meaning for ${entry.word}`}
+                      onClick={edit}
+                    >
+                      <Icon name="pencil" />
+                    </button>
+                  )}
                 </div>
-              ) : (
+              ) : onSave ? (
                 <button type="button" className="meaning-add" onClick={edit}>
                   <Icon name="plus" />
                   <span>Add a word</span>
                 </button>
+              ) : (
+                <p className="meaning-empty">No Thai meaning yet.</p>
               )
             ) : (
               <form

@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useWorkspace } from "./workspace";
-import { WordCard } from "./words";
+import { FlippableWordCard } from "./words";
 import { demoStore } from "../adapters/demo";
 import {
   HISTORY_PAGE_SIZE,
@@ -272,7 +272,11 @@ export default function HistoryView() {
               </span>
             </div>
             {words.map((entry) => (
-              <WordCard key={entry.id} entry={entry} headingLevel={3} />
+              <FlippableWordCard
+                key={entry.id}
+                entry={entry}
+                headingLevel={3}
+              />
             ))}
           </section>
         ))

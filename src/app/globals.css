@@ -1120,6 +1120,21 @@ dialog input {
   width: 100%;
   padding-bottom: 64px;
 }
+.history-day .flip-card-front > .word-card {
+  width: 100%;
+  padding-bottom: 64px;
+}
+.history-day .flip-card-back {
+  border-left-width: 1px;
+}
+.meaning-word {
+  color: var(--muted);
+  font-size: 18px;
+  margin: 0 0 18px;
+}
+.meaning-empty {
+  color: var(--muted);
+}
 .flip-card-back {
   display: grid;
   place-items: center;

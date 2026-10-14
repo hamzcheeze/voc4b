@@ -12,6 +12,32 @@ import { FlippableWordCard } from "../src/components/words";
 import { vocabulary } from "./fixtures/dictionary";
 import type { Vocabulary } from "../src/domain/vocabulary";
 afterEach(cleanup);
+it("lets History inspect the saved Thai meaning and return to the dictionary", () => {
+  const entry: Vocabulary = {
+    ...vocabulary,
+    content: { ...vocabulary.content, thaiMeaning: "ควร" },
+  };
+  render(<FlippableWordCard entry={entry} headingLevel={3} />);
+  expect(
+    screen.getByRole("heading", { name: "ought", level: 3 }),
+  ).toBeVisible();
+  const flip = screen.getByRole("button", { name: "Flip ought card" });
+  fireEvent.click(flip);
+  expect(flip).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByText("ควร")).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "ought" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Edit|Remove|Add/ })).toBeNull();
+  fireEvent.click(flip);
+  expect(
+    screen.getByRole("heading", { name: "ought", level: 3 }),
+  ).toBeVisible();
+});
+it("shows an honest empty back for a historical word without a meaning", () => {
+  render(<FlippableWordCard entry={vocabulary} headingLevel={3} />);
+  fireEvent.click(screen.getByRole("button", { name: "Flip ought card" }));
+  expect(screen.getByText("No Thai meaning yet.")).toBeVisible();
+  expect(screen.queryByRole("textbox")).toBeNull();
+});
 it("keeps draft after a failed save, then displays persisted text and allows editing", async () => {
   const save = vi
     .fn<(id: string, meaning: string) => Promise<void>>()

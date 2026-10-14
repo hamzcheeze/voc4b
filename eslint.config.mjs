@@ -10,6 +10,8 @@ export default defineConfig([
     "next-env.d.ts",
     "test-results/**",
     "playwright-report/**",
+    "output/imports/**",
+    "tmp/pdfs/**",
   ]),
   js.configs.recommended,
   ...ts.configs.recommended,
