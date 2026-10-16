@@ -13,10 +13,10 @@ it("production missing configuration is explicit 503", async () => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
   expect((await GET()).status).toBe(503);
 });
-it("rejects an invalid History filter before querying", async () => {
+it("rejects an invalid History search before querying", async () => {
   const response = await GET_HISTORY(
     new NextRequest(
-      "http://localhost:3000/api/history?period=month&value=2026-13",
+      `http://localhost:3000/api/history?search=${"a".repeat(81)}`,
     ),
   );
   expect(response.status).toBe(400);

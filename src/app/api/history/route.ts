@@ -12,13 +12,11 @@ export async function GET(request: NextRequest) {
   const parameters = request.nextUrl.searchParams;
   const parsed = historyQuerySchema.safeParse({
     page: parameters.get("page") ?? "1",
-    period: parameters.get("period") ?? "all",
-    value: parameters.get("value") ?? "",
-    order: parameters.get("order") ?? "desc",
+    search: parameters.get("search") ?? "",
   });
   if (!parsed.success)
     return NextResponse.json(
-      { error: "Invalid history filter." },
+      { error: "Invalid history search." },
       { status: 400, headers },
     );
   try {

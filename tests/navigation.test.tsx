@@ -11,7 +11,7 @@ import {
 import "@testing-library/jest-dom/vitest";
 import { Workspace } from "../src/components/workspace";
 import { WorkspaceLink } from "../src/components/workspace-link";
-import { dayKey } from "../src/domain/vocabulary";
+import { dateLabel, dayKey } from "../src/domain/vocabulary";
 import { vocabulary } from "./fixtures/dictionary";
 
 vi.mock("../src/application/auth-actions", () => ({ startSignIn: vi.fn() }));
@@ -98,6 +98,8 @@ it("loads History separately and keeps Today available when navigating back", as
   expect(window.location.pathname).toBe("/history");
   expect(screen.getByRole("heading", { name: "History" })).toBeVisible();
   expect(await screen.findByRole("heading", { name: "ought" })).toBeVisible();
+  expect(screen.queryByText(dateLabel(dayKey()))).toBeNull();
+  expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
   expect(screen.getByRole("link", { name: "History" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -135,7 +137,7 @@ it("prefetches the next History page and reuses cached pages", async () => {
             day: dayKey(),
           },
         ],
-        total: 81,
+        total: 201,
       }),
     );
   });
@@ -149,6 +151,47 @@ it("prefetches the next History page and reuses cached pages", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Previous" }));
   expect(await screen.findByRole("heading", { name: "page1" })).toBeVisible();
   expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+it("searches the entire History collection and starts results on page one", async () => {
+  vi.mocked(fetch).mockImplementation(async (input) => {
+    const requested = new URL(String(input), "http://localhost:3000");
+    const search = requested.searchParams.get("search");
+    const page = Number(requested.searchParams.get("page"));
+    return new Response(
+      JSON.stringify({
+        entries: [
+          {
+            ...vocabulary,
+            id: search ? "matching-old-word" : `page-${page}`,
+            word: search ? "rescind" : `page${page}`,
+            day: search ? "2020-01-01" : dayKey(),
+          },
+        ],
+        total: search ? 1 : 201,
+      }),
+    );
+  });
+  window.history.replaceState(null, "", "/history");
+  mount();
+  expect(await screen.findByRole("heading", { name: "page1" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(await screen.findByRole("heading", { name: "page2" })).toBeVisible();
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search words" }), {
+    target: { value: "rescind" },
+  });
+  expect(await screen.findByRole("heading", { name: "rescind" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+  expect(screen.getByText("1 word")).toBeVisible();
+  expect(
+    vi.mocked(fetch).mock.calls.some(([input]) => {
+      const requested = new URL(String(input), "http://localhost:3000");
+      return (
+        requested.searchParams.get("search") === "rescind" &&
+        requested.searchParams.get("page") === "1"
+      );
+    }),
+  ).toBe(true);
 });
 
 it.each([

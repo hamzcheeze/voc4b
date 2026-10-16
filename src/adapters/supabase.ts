@@ -40,11 +40,6 @@ export function serviceClient(url: string, key: string): SupabaseClient {
     },
   });
 }
-function lastDayOfMonth(value: string): string {
-  const date = new Date(0);
-  date.setUTCFullYear(Number(value.slice(0, 4)), Number(value.slice(5, 7)), 0);
-  return date.toISOString().slice(0, 10);
-}
 export class SupabaseRepository implements VocabularyRepository {
   constructor(
     private readonly client: SupabaseClient,
@@ -189,27 +184,17 @@ export class SupabaseRepository implements VocabularyRepository {
       .from("vocabulary")
       .select("id,word,day,created_at,content", { count: "exact" })
       .eq("user_id", this.userId);
-    if (query.value) {
-      if (query.period === "date") request = request.eq("day", query.value);
-      else if (query.period === "month" || query.period === "year") {
-        request = request.gte(
-          "day",
-          `${query.value}${query.period === "year" ? "-01-01" : "-01"}`,
-        );
-        const last =
-          query.period === "year"
-            ? `${query.value}-12-31`
-            : lastDayOfMonth(query.value);
-        request = request.lte("day", last);
-      }
-    }
-    const ascending = query.order === "asc";
+    if (query.search)
+      request = request.ilike(
+        "word",
+        `%${query.search.replace(/[\\%_]/g, "\\$&")}%`,
+      );
     const offset = (query.page - 1) * HISTORY_PAGE_SIZE;
     const { data, count, error } = await request
-      .order("day", { ascending })
-      .order("created_at", { ascending })
-      .order("word", { ascending })
-      .order("id", { ascending })
+      .order("day", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("word", { ascending: false })
+      .order("id", { ascending: false })
       .range(offset, offset + HISTORY_PAGE_SIZE - 1);
     if (error)
       throw databaseError(

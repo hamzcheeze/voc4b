@@ -2,19 +2,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useWorkspace } from "./workspace";
-import { FlippableWordCard } from "./words";
+import { HistoryWordCard } from "./words";
 import { demoStore } from "../adapters/demo";
 import {
   HISTORY_PAGE_SIZE,
   historyQuerySchema,
   type HistoryQuery,
 } from "../application/history-query";
-import {
-  dateLabel,
-  filterHistory,
-  vocabularySchema,
-  type Vocabulary,
-} from "../domain/vocabulary";
+import { filterHistory, vocabularySchema } from "../domain/vocabulary";
 const historyPageSchema = z.object({
   entries: z.array(vocabularySchema),
   total: z.number().int().nonnegative(),
@@ -26,22 +21,23 @@ type PageState =
 function historyUrl(query: HistoryQuery): string {
   return `/api/history?${new URLSearchParams({
     page: String(query.page),
-    period: query.period,
-    value: query.value,
-    order: query.order,
+    search: query.search,
   })}`;
 }
 export default function HistoryView() {
   const { mode, historyPages, historyVersion } = useWorkspace();
-  const [period, setPeriod] = useState<HistoryQuery["period"]>("all"),
-    [value, setValue] = useState(""),
-    [order, setOrder] = useState<HistoryQuery["order"]>("desc"),
+  const [searchInput, setSearchInput] = useState(""),
+    [search, setSearch] = useState(""),
     [page, setPage] = useState(1),
     [reload, setReload] = useState(0),
     [state, setState] = useState<PageState | null>(null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
   const parsed = useMemo(
-    () => historyQuerySchema.safeParse({ page, period, value, order }),
-    [page, period, value, order],
+    () => historyQuerySchema.safeParse({ page, search }),
+    [page, search],
   );
   const query = parsed.success ? parsed.data : null;
   const queryKey = query ? JSON.stringify(query) : "";
@@ -85,11 +81,13 @@ export default function HistoryView() {
       queueMicrotask(() => {
         if (!active) return;
         try {
-          const filters = {
-            order: query.order,
-            ...(query.value ? { [query.period]: query.value } : {}),
-          };
-          const rows = filterHistory(demoStore.list(), filters);
+          const rows = filterHistory(demoStore.list(), {
+            order: "desc",
+          }).filter((entry) =>
+            entry.word
+              .toLocaleLowerCase()
+              .includes(query.search.toLocaleLowerCase()),
+          );
           const offset = (query.page - 1) * HISTORY_PAGE_SIZE;
           setState({
             kind: "loaded",
@@ -136,10 +134,11 @@ export default function HistoryView() {
     };
   }, [mode, historyPages, query, stateKey]);
   const currentState = state?.key === stateKey ? state : null;
-  const data = currentState?.kind === "loaded" ? currentState.data : null;
-  const groups = new Map<string, Vocabulary[]>();
-  for (const row of data?.entries ?? [])
-    groups.set(row.day, [...(groups.get(row.day) || []), row]);
+  const data =
+    searchInput.trim() === search && currentState?.kind === "loaded"
+      ? currentState.data
+      : null;
+  const entries = data?.entries ?? [];
   const pageCount = data
     ? Math.max(1, Math.ceil(data.total / HISTORY_PAGE_SIZE))
     : 1;
@@ -153,96 +152,28 @@ export default function HistoryView() {
           </span>
         )}
       </div>
-      <div className="filters">
-        <div>
-          <label htmlFor="period" className="sr-only">
-            Time period
-          </label>
-          <select
-            id="period"
-            value={period}
-            onChange={(e) => {
-              const selected = e.target.value;
-              if (
-                selected === "all" ||
-                selected === "date" ||
-                selected === "month" ||
-                selected === "year"
-              )
-                setPeriod(selected);
-              setValue("");
-              setPage(1);
-            }}
-          >
-            <option value="all">All time</option>
-            <option value="date">Choose a date</option>
-            <option value="month">Choose a month</option>
-            <option value="year">Choose a year</option>
-          </select>
-        </div>
-        {period !== "all" && (
-          <div>
-            <label htmlFor="period-value">
-              {period === "date"
-                ? "Date"
-                : period === "month"
-                  ? "Month / year"
-                  : "Year"}
-            </label>
-            <input
-              id="period-value"
-              type={
-                period === "date"
-                  ? "date"
-                  : period === "month"
-                    ? "month"
-                    : "number"
-              }
-              min={period === "year" ? "1900" : undefined}
-              max={period === "year" ? "9999" : undefined}
-              placeholder={period === "year" ? "2026" : undefined}
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-        )}
-        <div className="sort-filter">
-          <label htmlFor="order" className="sr-only">
-            Sort order
-          </label>
-          <select
-            id="order"
-            value={order}
-            onChange={(e) => {
-              setOrder(e.target.value === "asc" ? "asc" : "desc");
-              setPage(1);
-            }}
-          >
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </select>
-        </div>
-        {period !== "all" && (
-          <button
-            className="text-button clear-filter"
-            onClick={() => {
-              setPeriod("all");
-              setValue("");
-              setPage(1);
-            }}
-          >
-            Clear filters
-          </button>
-        )}
+      <div className="history-search">
+        <label htmlFor="history-search" className="sr-only">
+          Search words
+        </label>
+        <input
+          id="history-search"
+          type="search"
+          autoComplete="off"
+          maxLength={80}
+          placeholder="Search all words"
+          value={searchInput}
+          onChange={(event) => {
+            setSearchInput(event.target.value);
+            setPage(1);
+          }}
+        />
       </div>
       {!parsed.success ? (
         <p className="error" role="alert">
-          Invalid history filter.
+          Invalid history search.
         </p>
-      ) : !currentState ? (
+      ) : searchInput.trim() !== search || !currentState ? (
         <p className="loading" role="status">
           Loading…
         </p>
@@ -258,28 +189,18 @@ export default function HistoryView() {
             Try again
           </button>
         </div>
-      ) : groups.size === 0 ? (
+      ) : entries.length === 0 ? (
         <div className="empty-history">
-          <p>No words found for this period</p>
+          <p>
+            {search ? "No words found for this search" : "No words saved yet"}
+          </p>
         </div>
       ) : (
-        Array.from(groups).map(([day, words]) => (
-          <section className="history-day" key={day}>
-            <div className="history-day-heading">
-              <h2>{dateLabel(day)}</h2>
-              <span>
-                {words.length} {words.length === 1 ? "word" : "words"}
-              </span>
-            </div>
-            {words.map((entry) => (
-              <FlippableWordCard
-                key={entry.id}
-                entry={entry}
-                headingLevel={3}
-              />
-            ))}
-          </section>
-        ))
+        <div className="history-word-list">
+          {entries.map((entry) => (
+            <HistoryWordCard key={entry.id} entry={entry} />
+          ))}
+        </div>
       )}
       {data && pageCount > 1 && (
         <nav className="history-pagination" aria-label="History pages">

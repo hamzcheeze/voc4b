@@ -618,70 +618,36 @@ dialog input {
 .history-count {
   padding-bottom: 5px;
 }
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 12px;
+.history-search {
   padding-bottom: 24px;
   margin-bottom: 0;
   border-bottom: 1px solid var(--line);
 }
-.filters > div {
-  min-width: 126px;
-}
-.filters label:not(.sr-only) {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 6px;
-  display: block;
-}
-.filters select {
-  font-size: 12px;
+.history-search input {
   width: 100%;
-  cursor: pointer;
-  min-height: 36px;
-  padding-top: 7px;
-  padding-bottom: 7px;
-  padding-right: 28px;
+  min-height: 44px;
+  font-size: 14px;
 }
-.filters input {
-  font-size: 12px;
-  min-height: 36px;
-  padding-top: 7px;
-  padding-bottom: 7px;
+.history-word-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(40%);
+  column-gap: 24px;
+  margin-bottom: 28px;
 }
-.filters option {
-  background: var(--surface);
-  color: var(--ink);
-}
-.sort-filter {
-  margin-left: auto;
-}
-.clear-filter {
-  align-self: center;
-  font-size: 11px;
-}
-.history-day {
-  margin-top: 32px;
-  margin-bottom: 42px;
-}
-.history-day-heading {
-  display: flex;
-  justify-content: space-between;
+.word-card.history-word-card {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  margin-bottom: 0;
-  padding-bottom: 14px;
-  color: var(--muted);
+  padding: 24px 0;
 }
-.history-day-heading h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--ink);
+.history-word-card .word-title {
+  font-weight: 600;
 }
-.history-day-heading span {
-  font-size: 11px;
+.history-word-card .meaning p[lang="th"] {
+  font-weight: 500;
+}
+.history-word-list .word-card:first-child {
+  border-top: 0;
 }
 .empty-history {
   padding: 50px 0;
@@ -936,9 +902,13 @@ dialog input {
   .history-heading {
     margin-bottom: 24px;
   }
-  .history-day {
-    margin-top: 26px;
-    margin-bottom: 32px;
+  .history-word-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .word-card.history-word-card {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+    padding: 20px 0;
   }
 }
 @media (max-width: 520px) {
@@ -989,25 +959,11 @@ dialog input {
   .history-count {
     font-size: 11px;
   }
-  .filters {
-    gap: 10px;
+  .history-search {
     padding-bottom: 22px;
   }
-  .filters > div {
-    min-width: 0;
-    flex: 1 1 calc(50% - 5px);
-  }
-  .filters input {
+  .history-search input {
     width: 100%;
-  }
-  .filters .sort-filter {
-    margin-left: 0;
-  }
-  .clear-filter {
-    padding: 9px 0;
-  }
-  .history-day-heading h2 {
-    font-size: 12px;
   }
   .mode-popover {
     width: 232px;
@@ -1099,6 +1055,14 @@ dialog input {
   perspective: 1400px;
   min-width: 0;
 }
+.today-flip-card {
+  cursor: pointer;
+}
+.today-flip-card:has(> .sr-only:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
 .flip-card-rotor {
   display: grid;
   transform-style: preserve-3d;
@@ -1118,14 +1082,6 @@ dialog input {
 }
 .flip-card-front > .today-word-card {
   width: 100%;
-  padding-bottom: 64px;
-}
-.history-day .flip-card-front > .word-card {
-  width: 100%;
-  padding-bottom: 64px;
-}
-.history-day .flip-card-back {
-  border-left-width: 1px;
 }
 .meaning-word {
   color: var(--muted);
@@ -1136,6 +1092,7 @@ dialog input {
   color: var(--muted);
 }
 .flip-card-back {
+  position: relative;
   display: grid;
   place-items: center;
   min-height: 210px;
@@ -1145,6 +1102,13 @@ dialog input {
   border-left: 6px solid var(--ink);
   border-radius: 12px;
   transform: rotateY(180deg);
+}
+.today-flip-card .flip-card-back {
+  padding-bottom: 42px;
+}
+.flip-card-back .meaning-edit-button {
+  top: 24px;
+  right: 18px;
 }
 .card-flip-button {
   position: absolute;
@@ -1178,10 +1142,7 @@ dialog input {
   border-radius: 6px;
 }
 .saved-thai-meaning {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  text-align: center;
 }
 .saved-thai-meaning p {
   margin: 0;
@@ -1189,9 +1150,6 @@ dialog input {
   line-height: 1.7;
   overflow-wrap: anywhere;
   min-width: 0;
-}
-.saved-thai-meaning .icon-button {
-  flex-shrink: 0;
 }
 .meaning-editor input {
   width: 100%;
@@ -1211,11 +1169,15 @@ dialog input {
   margin: 10px 0 0;
 }
 @media (max-width: 640px) {
-  .flip-card-front > .word-card.today-word-card {
-    padding-bottom: 62px;
-  }
   .flip-card-back {
     padding: 32px 20px 62px;
+  }
+  .today-flip-card .flip-card-back {
+    padding-bottom: 32px;
+  }
+  .flip-card-back .meaning-edit-button {
+    top: 20px;
+    right: 8px;
   }
   .card-flip-button {
     right: 12px;

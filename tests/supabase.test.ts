@@ -89,13 +89,13 @@ it("scopes list and duplicate reads to the authenticated owner", async () => {
     ).toBe(`eq.${owner}`);
 });
 
-it("fetches one filtered History page with a total count", async () => {
+it("searches all saved words before fetching a History page", async () => {
   const fetcher = vi.fn<typeof fetch>(
     async () =>
       new Response(JSON.stringify([vocabulary]), {
         headers: {
           "Content-Type": "application/json",
-          "Content-Range": "40-40/81",
+          "Content-Range": "100-100/181",
         },
       }),
   );
@@ -107,24 +107,20 @@ it("fetches one filtered History page with a total count", async () => {
   expect(
     await repository.listHistoryPage({
       page: 2,
-      period: "month",
-      value: "2026-10",
-      order: "desc",
+      search: "OUGHT",
     }),
-  ).toEqual({ entries: [vocabulary], total: 81 });
+  ).toEqual({ entries: [vocabulary], total: 181 });
   const [input, options] = fetcher.mock.calls[0];
   const url = new URL(input instanceof Request ? input.url : input);
   expect(url.searchParams.get("user_id")).toBe(
     "eq.00000000-0000-4000-8000-000000000001",
   );
-  expect(url.searchParams.getAll("day")).toEqual([
-    "gte.2026-10-01",
-    "lte.2026-10-31",
-  ]);
+  expect(url.searchParams.get("word")).toBe("ilike.%OUGHT%");
+  expect(url.searchParams.has("day")).toBe(false);
   expect(url.searchParams.get("order")).toBe(
     "day.desc,created_at.desc,word.desc,id.desc",
   );
-  expect(url.searchParams.get("offset")).toBe("40");
-  expect(url.searchParams.get("limit")).toBe("40");
+  expect(url.searchParams.get("offset")).toBe("100");
+  expect(url.searchParams.get("limit")).toBe("100");
   expect(new Headers(options?.headers).get("Prefer")).toContain("count=exact");
 });

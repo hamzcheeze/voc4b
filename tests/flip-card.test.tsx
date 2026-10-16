@@ -8,35 +8,73 @@ import {
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { FlippableWordCard } from "../src/components/words";
+import { FlippableWordCard, HistoryWordCard } from "../src/components/words";
 import { vocabulary } from "./fixtures/dictionary";
 import type { Vocabulary } from "../src/domain/vocabulary";
 afterEach(cleanup);
-it("lets History inspect the saved Thai meaning and return to the dictionary", () => {
+it("flips Today's card from its content without showing a Flip control", () => {
+  const remove = vi.fn();
   const entry: Vocabulary = {
     ...vocabulary,
     content: { ...vocabulary.content, thaiMeaning: "ควร" },
   };
-  render(<FlippableWordCard entry={entry} headingLevel={3} />);
-  expect(
-    screen.getByRole("heading", { name: "ought", level: 3 }),
-  ).toBeVisible();
+  const { container } = render(
+    <FlippableWordCard entry={entry} todayPosition={1} onRemove={remove} />,
+  );
+  const card = container.querySelector(".flip-card");
   const flip = screen.getByRole("button", { name: "Flip ought card" });
-  fireEvent.click(flip);
-  expect(flip).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByText("ควร")).toBeVisible();
-  expect(screen.queryByRole("heading", { name: "ought" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /Edit|Remove|Add/ })).toBeNull();
-  fireEvent.click(flip);
+  expect(flip).toHaveClass("sr-only");
+  fireEvent.click(screen.getByText("1 more meaning"));
+  expect(card).toHaveAttribute("data-face", "front");
+  fireEvent.click(screen.getByRole("heading", { name: "ought" }));
+  expect(card).toHaveAttribute("data-face", "back");
+  fireEvent.click(screen.getByText("ควร"));
+  expect(card).toHaveAttribute("data-face", "front");
+  fireEvent.click(screen.getByRole("button", { name: "Remove ought" }));
+  expect(remove).toHaveBeenCalledOnce();
+  expect(card).toHaveAttribute("data-face", "front");
+});
+it("shows only the saved Thai meaning in History without a flip control", () => {
+  const entry: Vocabulary = {
+    ...vocabulary,
+    content: { ...vocabulary.content, thaiMeaning: "ควร" },
+  };
+  render(<HistoryWordCard entry={entry} />);
   expect(
     screen.getByRole("heading", { name: "ought", level: 3 }),
   ).toBeVisible();
+  expect(screen.getByText("modal verb")).toBeVisible();
+  expect(screen.getByText("/ɔt/")).toBeVisible();
+  expect(screen.getByText("ควร")).toBeVisible();
+  expect(screen.queryByText("Used to say what is necessary or right.")).toBeNull();
+  expect(screen.queryByText("1 more meaning")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Flip|Edit|Remove/ })).toBeNull();
 });
-it("shows an honest empty back for a historical word without a meaning", () => {
-  render(<FlippableWordCard entry={vocabulary} headingLevel={3} />);
-  fireEvent.click(screen.getByRole("button", { name: "Flip ought card" }));
+it("labels a historical word that has no Thai meaning", () => {
+  render(<HistoryWordCard entry={vocabulary} />);
   expect(screen.getByText("No Thai meaning yet.")).toBeVisible();
+  expect(screen.queryByText("Used to say what is necessary or right.")).toBeNull();
   expect(screen.queryByRole("textbox")).toBeNull();
+});
+it("does not show an old English explanation in History", () => {
+  render(
+    <HistoryWordCard
+      entry={{
+        id: "old",
+        word: "rescind",
+        day: "2026-10-09",
+        content: {
+          kind: "legacy",
+          explanation: "To cancel a decision.",
+          syllables: [{ text: "sind", stressed: true }],
+        },
+      }}
+    />,
+  );
+  expect(screen.getByRole("heading", { name: "rescind" })).toBeVisible();
+  expect(screen.getByText("No Thai meaning yet.")).toBeVisible();
+  expect(screen.queryByText("To cancel a decision.")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Flip/ })).toBeNull();
 });
 it("keeps draft after a failed save, then displays persisted text and allows editing", async () => {
   const save = vi
@@ -86,8 +124,14 @@ it("keeps draft after a failed save, then displays persisted text and allows edi
   );
   fireEvent.click(flip);
   fireEvent.click(flip);
-  fireEvent.click(
-    screen.getByRole("button", { name: "Edit Thai meaning for ought" }),
+  const edit = screen.getByRole("button", {
+    name: "Edit Thai meaning for ought",
+  });
+  expect(edit.parentElement).toHaveClass("flip-card-back");
+  fireEvent.click(edit);
+  expect(container.querySelector(".flip-card")).toHaveAttribute(
+    "data-face",
+    "back",
   );
   expect(screen.getByRole("textbox")).toHaveValue("ควร");
   fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });

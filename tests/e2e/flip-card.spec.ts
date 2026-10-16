@@ -31,7 +31,7 @@ test("flip, add and edit a Thai meaning without reloading another card", async (
       reloads.push(request.url());
   });
   const flip = page.getByRole("button", { name: "Flip rescind card" });
-  await flip.click();
+  await page.getByRole("heading", { name: "rescind", exact: true }).click();
   await expect(flip).toHaveAttribute("aria-pressed", "true");
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
@@ -50,11 +50,11 @@ test("flip, add and edit a Thai meaning without reloading another card", async (
   await expect(page.getByText("2 / 2 words", { exact: true })).toBeVisible();
   expect(reloads).toEqual([]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await flip.click();
+  await page.getByText("ยกเลิกคำสั่งหรือข้อตกลง", { exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await flip.click();
+  await page.getByRole("heading", { name: "rescind", exact: true }).click();
   await expect(
     page.getByText("ยกเลิกคำสั่งหรือข้อตกลง", { exact: true }),
   ).toBeVisible();
@@ -69,7 +69,7 @@ test("flip, add and edit a Thai meaning without reloading another card", async (
   await expect(secondHeading).toHaveAttribute("data-preserved", "yes");
   expect(reloads).toEqual([]);
   await page.reload();
-  await page.getByRole("button", { name: "Flip rescind card" }).click();
+  await page.getByRole("heading", { name: "rescind", exact: true }).click();
   await expect(page.getByText("เพิกถอน", { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -81,7 +81,7 @@ test("Thai input preserves composing Enter and supports cancellation", async ({
   await page.goto("/");
   await page.getByLabel("Word", { exact: true }).fill("rescind");
   await page.getByLabel("Word", { exact: true }).press("Enter");
-  await page.getByRole("button", { name: "Flip rescind card" }).click();
+  await page.getByRole("heading", { name: "rescind", exact: true }).click();
   expect(
     await page
       .locator(".flip-card-rotor")
@@ -126,7 +126,7 @@ test("expanded details retain their height and audio controls through a real fli
   const card = page.locator(".flip-card");
   const front = page.getByRole("heading", { name: "ought", exact: true });
   const before = await card.boundingBox();
-  await page.getByRole("button", { name: "Flip ought card" }).click();
+  await front.click();
   const rotatingFrames = await page
     .locator(".flip-card-rotor")
     .evaluate(async (node) => {
@@ -163,7 +163,9 @@ test("expanded details retain their height and audio controls through a real fli
     path: `docs/flip-${info.project.name}-back.png`,
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Flip ought card" }).click();
+  await page
+    .getByText("ควรทำสิ่งที่ถูกต้อง หรือสิ่งที่จำเป็น", { exact: true })
+    .click();
   await expect(front).toBeVisible();
   await expect(
     page.getByText("They ought to arrive soon.", { exact: true }),

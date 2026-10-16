@@ -22,8 +22,8 @@ Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and
 5. Run `supabase/migrations/005_nextauth.sql`. It preserves existing vocabulary and user IDs while moving account and session storage to NextAuth.
 6. Run `supabase/migrations/006_history_pagination.sql` to index owner-scoped History pages.
 7. Run `supabase/migrations/007_thai_meaning.sql` to save personal Thai meanings from the back of each Today card. The function changes only the meaning on a word owned by the signed-in account.
-7. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
-8. Add these values to `.env.local`:
+8. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
+9. Add these values to `.env.local`:
 
 ```dotenv
 APP_MODE=live
@@ -59,7 +59,7 @@ For iPhone OAuth testing, use a stable HTTPS domain with registered callbacks. `
 
 Add one English word at a time. `POST /api/words` verifies the NextAuth session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
 `DELETE /api/words?id=...` removes only a word saved today by the signed-in user.
-`GET /api/words` returns today's words. History uses `GET /api/history` with page, period, value, and order parameters. Each response includes up to 40 words and the filtered total.
+`GET /api/words` returns today's words. History uses `GET /api/history` with page and search parameters. Search matches saved words across the whole collection before pagination. Each response includes up to 100 words and the matching total.
 
 A failed request, missing word, malformed response, or unrelated redirect leaves today's word slots unchanged. If Simple Wiktionary is unavailable, Cambridge data can still be saved without verb forms. The app skips blank definitions and does not save an entry if no usable definitions remain.
 

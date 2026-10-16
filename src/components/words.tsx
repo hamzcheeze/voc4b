@@ -176,6 +176,42 @@ export function WordCard({
     </article>
   );
 }
+export function HistoryWordCard({ entry }: { entry: Vocabulary }) {
+  const content = entry.content;
+  const preferred =
+    content.kind === "dictionary"
+      ? (content.entry.pronunciations.find((p) => p.region === "us") ??
+        content.entry.pronunciations.find((p) => p.region === "uk") ??
+        content.entry.pronunciations[0])
+      : undefined;
+  const partOfSpeech =
+    content.kind === "dictionary" ? content.entry.definitions[0]?.pos : "";
+  return (
+    <article className="word-card history-word-card">
+      <div className="word-identity">
+        <h3 className="word-title" lang="en">
+          {entry.word}
+        </h3>
+        {preferred && (
+          <Pronunciation word={entry.word} pronunciation={preferred} />
+        )}
+        {content.kind === "legacy" && (
+          <p className="legacy-pronunciation" lang="en">
+            {content.syllables.map((syllable) => syllable.text).join(" · ")}
+          </p>
+        )}
+      </div>
+      <div className="word-content">
+        <div className="meaning">
+          {partOfSpeech && <p className="part-of-speech">{partOfSpeech}</p>}
+          <p lang={content.thaiMeaning ? "th" : "en"}>
+            {content.thaiMeaning ?? "No Thai meaning yet."}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
 function Sense({
   definition,
   showExamples = true,
@@ -335,6 +371,20 @@ export function FlippableWordCard({
   const composing = useRef(false);
   const id = useId();
   const meaning = entry.content.thaiMeaning;
+  function flipCard() {
+    flip.current?.focus();
+    setFace((face) => (face === "front" ? "back" : "front"));
+    setEditor({ kind: "view" });
+  }
+  function handleCardClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (todayPosition === undefined || editor.kind === "saving") return;
+    if (
+      event.target instanceof Element &&
+      event.target.closest("button, a, input, textarea, select, summary")
+    )
+      return;
+    flipCard();
+  }
   function edit() {
     setEditor({ kind: "editing", draft: meaning ?? "" });
     requestAnimationFrame(() => input.current?.focus());
@@ -379,7 +429,11 @@ export function FlippableWordCard({
     }
   }
   return (
-    <div className="flip-card" data-face={face}>
+    <div
+      className={`flip-card${todayPosition === undefined ? "" : " today-flip-card"}`}
+      data-face={face}
+      onClick={handleCardClick}
+    >
       <div className="flip-card-rotor">
         <div
           className="flip-card-face flip-card-front"
@@ -399,6 +453,16 @@ export function FlippableWordCard({
           inert={face === "front"}
           aria-hidden={face === "front"}
         >
+          {editor.kind === "view" && meaning && onSave && (
+            <button
+              type="button"
+              className="word-remove meaning-edit-button"
+              aria-label={`Edit Thai meaning for ${entry.word}`}
+              onClick={edit}
+            >
+              <Icon name="pencil" />
+            </button>
+          )}
           <div className="meaning-editor">
             {todayPosition === undefined && (
               <p className="meaning-word" lang="en">
@@ -409,16 +473,6 @@ export function FlippableWordCard({
               meaning ? (
                 <div className="saved-thai-meaning">
                   <p lang="th">{meaning}</p>
-                  {onSave && (
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label={`Edit Thai meaning for ${entry.word}`}
-                      onClick={edit}
-                    >
-                      <Icon name="pencil" />
-                    </button>
-                  )}
                 </div>
               ) : onSave ? (
                 <button type="button" className="meaning-add" onClick={edit}>
@@ -494,15 +548,11 @@ export function FlippableWordCard({
       <button
         ref={flip}
         type="button"
-        className="card-flip-button"
+        className={todayPosition === undefined ? "card-flip-button" : "sr-only"}
         aria-label={`Flip ${entry.word} card`}
         aria-pressed={face === "back"}
         disabled={editor.kind === "saving"}
-        onClick={() => {
-          flip.current?.focus();
-          setFace((face) => (face === "front" ? "back" : "front"));
-          setEditor({ kind: "view" });
-        }}
+        onClick={flipCard}
       >
         <Icon name="flip" />
         <span>Flip</span>

@@ -53,21 +53,21 @@ test("zero → one → two, persistence, history and demo reset", async ({
   await expect(page.getByRole("button", { name: /^Add$/ })).toHaveCount(0);
   await page.getByRole("link", { name: "History" }).click();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
-  await page.getByLabel("Time period", { exact: true }).selectOption("year");
-  await page.getByLabel("Year", { exact: true }).fill("1900");
-  await expect(page.getByText("No words found for this period")).toBeVisible();
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  const search = page.getByRole("searchbox", { name: "Search words" });
+  await search.fill("missingword");
+  await expect(page.getByText("No words found for this search")).toBeVisible();
+  await search.fill("rescind");
   await expect(
     page.getByRole("heading", { name: "rescind", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Sort order").selectOption("asc");
-  const ascending = await page
-    .locator(".history-day-heading h2")
-    .allTextContents();
-  await page.getByLabel("Sort order").selectOption("desc");
-  expect(
-    await page.locator(".history-day-heading h2").allTextContents(),
-  ).toEqual([...ascending].reverse());
+  await expect(
+    page.getByRole("heading", { name: "serene", exact: true }),
+  ).toHaveCount(0);
+  await search.clear();
+  await expect(
+    page.getByRole("heading", { name: "serene", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".history-day-heading")).toHaveCount(0);
   await page.getByText("Demo", { exact: true }).click();
   await expect(
     page.getByText("No dictionary API or Supabase connection"),
