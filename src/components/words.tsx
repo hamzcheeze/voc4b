@@ -376,7 +376,7 @@ export function FlippableWordCard({
     setFace((face) => (face === "front" ? "back" : "front"));
     setEditor({ kind: "view" });
   }
-  function handleCardClick(event: React.MouseEvent<HTMLDivElement>) {
+  function handleCardDoubleClick(event: React.MouseEvent<HTMLDivElement>) {
     if (todayPosition === undefined || editor.kind === "saving") return;
     if (
       event.target instanceof Element &&
@@ -432,7 +432,8 @@ export function FlippableWordCard({
     <div
       className={`flip-card${todayPosition === undefined ? "" : " today-flip-card"}`}
       data-face={face}
-      onClick={handleCardClick}
+      onDoubleClick={handleCardDoubleClick}
+      title={todayPosition === undefined ? undefined : "Double-click to flip"}
     >
       <div className="flip-card-rotor">
         <div

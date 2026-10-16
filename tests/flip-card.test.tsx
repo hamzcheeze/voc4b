@@ -12,7 +12,7 @@ import { FlippableWordCard, HistoryWordCard } from "../src/components/words";
 import { vocabulary } from "./fixtures/dictionary";
 import type { Vocabulary } from "../src/domain/vocabulary";
 afterEach(cleanup);
-it("flips Today's card from its content without showing a Flip control", () => {
+it("flips Today's card on a double-click while a single click leaves it visible", () => {
   const remove = vi.fn();
   const entry: Vocabulary = {
     ...vocabulary,
@@ -27,8 +27,14 @@ it("flips Today's card from its content without showing a Flip control", () => {
   fireEvent.click(screen.getByText("1 more meaning"));
   expect(card).toHaveAttribute("data-face", "front");
   fireEvent.click(screen.getByRole("heading", { name: "ought" }));
+  expect(card).toHaveAttribute("data-face", "front");
+  fireEvent.doubleClick(screen.getByRole("heading", { name: "ought" }));
   expect(card).toHaveAttribute("data-face", "back");
   fireEvent.click(screen.getByText("ควร"));
+  expect(card).toHaveAttribute("data-face", "back");
+  fireEvent.doubleClick(screen.getByText("ควร"));
+  expect(card).toHaveAttribute("data-face", "front");
+  fireEvent.doubleClick(screen.getByRole("button", { name: "Remove ought" }));
   expect(card).toHaveAttribute("data-face", "front");
   fireEvent.click(screen.getByRole("button", { name: "Remove ought" }));
   expect(remove).toHaveBeenCalledOnce();
@@ -46,14 +52,18 @@ it("shows only the saved Thai meaning in History without a flip control", () => 
   expect(screen.getByText("modal verb")).toBeVisible();
   expect(screen.getByText("/ɔt/")).toBeVisible();
   expect(screen.getByText("ควร")).toBeVisible();
-  expect(screen.queryByText("Used to say what is necessary or right.")).toBeNull();
+  expect(
+    screen.queryByText("Used to say what is necessary or right."),
+  ).toBeNull();
   expect(screen.queryByText("1 more meaning")).toBeNull();
   expect(screen.queryByRole("button", { name: /Flip|Edit|Remove/ })).toBeNull();
 });
 it("labels a historical word that has no Thai meaning", () => {
   render(<HistoryWordCard entry={vocabulary} />);
   expect(screen.getByText("No Thai meaning yet.")).toBeVisible();
-  expect(screen.queryByText("Used to say what is necessary or right.")).toBeNull();
+  expect(
+    screen.queryByText("Used to say what is necessary or right."),
+  ).toBeNull();
   expect(screen.queryByRole("textbox")).toBeNull();
 });
 it("does not show an old English explanation in History", () => {
