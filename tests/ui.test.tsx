@@ -8,6 +8,15 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+it("links a phrase to its hyphenated Cambridge URL", () => {
+  render(<WordCard entry={{ ...vocabulary, word: "wear off" }} />);
+  expect(
+    screen.getByRole("link", { name: "Cambridge Dictionary" }),
+  ).toHaveAttribute(
+    "href",
+    "https://dictionary.cambridge.org/us/dictionary/english/wear-off",
+  );
+});
 it.each([0, 1, 2])(
   "shows saved cards and keeps adding owned by the Today form, saved=%i",
   (n) => {

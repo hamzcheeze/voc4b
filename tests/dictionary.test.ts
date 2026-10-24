@@ -12,6 +12,10 @@ const wiktionary = readFileSync(
   new URL("./fixtures/wiktionary.html", import.meta.url),
   "utf8",
 );
+const phrasal = readFileSync(
+  new URL("./fixtures/cambridge-phrasal.html", import.meta.url),
+  "utf8",
+);
 function pages(html = cambridge, forms = wiktionary) {
   const fetcher = vi.fn(
     async (url: URL) =>
@@ -25,6 +29,75 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.useRealTimers();
 });
+it("reads phrasal verb meanings and Cambridge base-verb pronunciations", async () => {
+  pages(phrasal, "");
+  const entry = await new CambridgeDictionary().lookup("wear off");
+  expect(entry).toEqual({
+    headword: "wear off",
+    partsOfSpeech: ["phrasal verb", "verb"],
+    pronunciations: [
+      {
+        pos: "phrasal verb",
+        region: "us",
+        ipa: "/wer/",
+        audioUrl:
+          "https://dictionary.cambridge.org/us/media/english/us_pron/e/eus/eus74/eus74948.mp3",
+      },
+      {
+        pos: "phrasal verb",
+        region: "uk",
+        ipa: "/weər/",
+        audioUrl:
+          "https://dictionary.cambridge.org/us/media/english/uk_pron/u/ukw/ukwax/ukwaxwo028.mp3",
+      },
+    ],
+    definitions: [
+      {
+        id: "0",
+        pos: "phrasal verb",
+        source: "cald4",
+        text: "If a feeling or the effect of something wears off, it gradually disappears:",
+        examples: [
+          {
+            id: "0",
+            text: "Most patients find that the numbness from the injection wears off after about an hour.",
+          },
+        ],
+      },
+    ],
+    verbForms: [],
+  });
+});
+it("keeps a nested phrasal verb's part of speech separate from its parent entry", async () => {
+  pages(
+    phrasal.replace(
+      '<div class="entry-body__el clrd js-share-holder">',
+      '<div class="entry-body__el clrd js-share-holder"><span class="pos dpos">noun</span>',
+    ),
+    "",
+  );
+  const entry = await new CambridgeDictionary().lookup("wear off");
+  expect(entry.definitions[0].pos).toBe("phrasal verb");
+  expect(entry.pronunciations.map(({ pos }) => pos)).toEqual([
+    "phrasal verb",
+    "phrasal verb",
+  ]);
+});
+it.each(["https://evil.example/audio.mp3", "http://["])(
+  "rejects unsafe phrasal verb audio %s",
+  async (audioUrl) => {
+    pages(
+      phrasal.replace(
+        "/us/media/english/us_pron/e/eus/eus74/eus74948.mp3",
+        audioUrl,
+      ),
+      "",
+    );
+    await expect(new CambridgeDictionary().lookup("wear off")).rejects.toThrow(
+      /invalid or incomplete data/,
+    );
+  },
+);
 it("preserves the pinned original senses, examples, sources, pronunciations and forms", async () => {
   pages();
   const entry = await new CambridgeDictionary().lookup("Ought");

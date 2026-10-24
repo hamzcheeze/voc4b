@@ -41,12 +41,9 @@ describe("historical dictionary terms", () => {
   ])("rejects unsafe or non-English terms %s", (input) =>
     expect(() => validateDictionaryTerm(input)).toThrow(),
   );
-  it.each(["rocket science", "cliché"])(
-    "keeps today's one-word restriction for %s",
-    (input) => {
-      expect(() => validateWord(input)).toThrow("Enter one English word");
-    },
-  );
+  it("keeps accented terms restricted to historical dictionary lookup", () => {
+    expect(() => validateWord("cliché")).toThrow();
+  });
 });
 describe("Bangkok calendar and two-word policy", () => {
   it("changes day at Bangkok midnight, not UTC midnight", () => {
@@ -63,9 +60,36 @@ describe("Bangkok calendar and two-word policy", () => {
   );
   it("accepts a single English word and trims it", () =>
     expect(validateWord(" Rescind ")).toBe("Rescind"));
-  it.each(["", "Voc4b", "<script>", "123", "a".repeat(81)])(
-    "rejects invalid input %s",
-    (word) => expect(() => validateWord(word)).toThrow(),
+  it.each([
+    ["wear off", "wear off"],
+    [" Wear   Off ", "Wear Off"],
+    ["rocket science", "rocket science"],
+    ["mother-in-law", "mother-in-law"],
+    ["someone's cup of tea", "someone's cup of tea"],
+    ["a ".repeat(39) + "aa", "a ".repeat(39) + "aa"],
+  ])(
+    "accepts and normalizes the English word or phrase %s",
+    (input, expected) => {
+      expect(validateWord(input)).toBe(expected);
+    },
+  );
+  it.each([
+    "",
+    "Voc4b",
+    "<script>",
+    "123",
+    "a".repeat(81),
+    "a ".repeat(40) + "a",
+    "wear\noff",
+    "wear\toff",
+    "wear off\n",
+    "wear\u0000off",
+    "wear/off",
+    "wear - off",
+    "wear--off",
+    "wear off-",
+  ])("rejects invalid input %s", (word) =>
+    expect(() => validateWord(word)).toThrow(),
   );
 });
 describe("history filters", () => {

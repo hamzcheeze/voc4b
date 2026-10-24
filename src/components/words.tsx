@@ -165,7 +165,7 @@ export function WordCard({
         {!compact && (
           <a
             className="dictionary-source"
-            href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase())}`}
+            href={`https://dictionary.cambridge.org/us/dictionary/english/${encodeURIComponent(entry.word.toLowerCase().replace(/ /g, "-"))}`}
             target="_blank"
             rel="noreferrer"
           >

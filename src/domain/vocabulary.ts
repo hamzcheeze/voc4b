@@ -17,9 +17,13 @@ export function remainingSlots(saved: number): number {
   return Math.max(0, DAILY_LIMIT - saved);
 }
 export function validateWord(input: string): string {
-  const word = input.trim();
-  if (!/^[a-zA-Z]+(?:[-'][a-zA-Z]+)*$/.test(word) || word.length > 80)
-    throw new Error("Enter one English word (up to 80 characters).");
+  const word = input.trim().replace(/ +/g, " ");
+  if (
+    /\p{Cc}/u.test(input) ||
+    !/^[a-zA-Z]+(?:[-' ][a-zA-Z]+)*$/.test(word) ||
+    word.length > 80
+  )
+    throw new Error("Enter an English word or phrase (up to 80 characters).");
   return word;
 }
 export function validateDictionaryTerm(input: string): string {

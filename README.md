@@ -22,8 +22,9 @@ Open http://localhost:3000. Without Supabase keys, the app runs in demo mode and
 5. Run `supabase/migrations/005_nextauth.sql`. It preserves existing vocabulary and user IDs while moving account and session storage to NextAuth.
 6. Run `supabase/migrations/006_history_pagination.sql` to index owner-scoped History pages.
 7. Run `supabase/migrations/007_thai_meaning.sql` to save personal Thai meanings from the back of each Today card. The function changes only the meaning on a word owned by the signed-in account.
-8. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
-9. Add these values to `.env.local`:
+8. Run `supabase/migrations/008_phrasal_verbs.sql` to allow phrases such as `wear off` and `turn down` in today's entries. Each phrase uses one daily slot.
+9. In Supabase **Project settings → Data API → Exposed schemas**, add `next_auth` without removing the existing schemas. Its tables allow only server-side service-role access.
+10. Add these values to `.env.local`:
 
 ```dotenv
 APP_MODE=live
@@ -57,7 +58,7 @@ Sessions use an HttpOnly cookie and a database record with a rolling 400-day lif
 
 For iPhone OAuth testing, use a stable HTTPS domain with registered callbacks. `localhost` on an iPhone refers to the iPhone itself, and OAuth providers may reject raw LAN IP callbacks. Cookies for `localhost` and a LAN IP are separate.
 
-Add one English word at a time. `POST /api/words` verifies the NextAuth session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
+Add one English word or phrase at a time. Phrases keep their spaces in your library and use hyphens in Cambridge URLs, for example `wear off` becomes `wear-off`. Each entry uses one of the two daily slots. `POST /api/words` verifies the NextAuth session, fetches Cambridge pages from the Next.js server through `CambridgeDictionary`, parses the HTML with Cheerio, and validates the entry before saving it.
 `DELETE /api/words?id=...` removes only a word saved today by the signed-in user.
 `GET /api/words` returns today's words. History uses `GET /api/history` with page and search parameters. Search matches saved words across the whole collection before pagination. Each response includes up to 100 words and the matching total.
 

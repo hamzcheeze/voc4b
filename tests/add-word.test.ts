@@ -20,6 +20,32 @@ it("looks up dictionary data before atomic persistence", async () => {
     p.repository.save.mock.invocationCallOrder[0],
   );
 });
+it("adds a normalized phrase and preserves spaces in the saved word", async () => {
+  const p = ports();
+  const phraseEntry = { ...dictionaryEntry, headword: "wear off" };
+  const saved = {
+    ...vocabulary,
+    word: "wear off",
+    content: { kind: "dictionary" as const, entry: phraseEntry },
+  };
+  p.dictionary.lookup.mockResolvedValue(phraseEntry);
+  p.repository.save.mockResolvedValue(saved);
+
+  await expect(addWord(" wear   off ", p)).resolves.toEqual(saved);
+  expect(p.repository.hasWord).toHaveBeenCalledWith("wear off");
+  expect(p.dictionary.lookup).toHaveBeenCalledWith("wear off");
+  expect(p.repository.save).toHaveBeenCalledWith("wear off", phraseEntry);
+});
+it("rejects an existing phrase after normalizing repeated spaces", async () => {
+  const p = ports();
+  p.repository.hasWord.mockResolvedValue(true);
+  await expect(addWord(" wear   off ", p)).rejects.toThrow(
+    "already in your library",
+  );
+  expect(p.repository.hasWord).toHaveBeenCalledWith("wear off");
+  expect(p.dictionary.lookup).not.toHaveBeenCalled();
+  expect(p.repository.save).not.toHaveBeenCalled();
+});
 it("does not call the dictionary if already full", async () => {
   const p = ports(2);
   await expect(addWord("rescind", p)).rejects.toThrow(/สอง|2|two/i);

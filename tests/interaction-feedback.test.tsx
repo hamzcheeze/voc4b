@@ -203,37 +203,43 @@ it("shows the inline form immediately and rejects an existing word without a req
   expect(input).toHaveValue("  OUGHT  ");
   expect(fetch).not.toHaveBeenCalled();
 });
-it("saves from the inline form once, keeps controls disabled while pending, then clears the input", async () => {
-  const pending = Promise.withResolvers<Response>();
-  vi.mocked(fetch).mockReturnValue(pending.promise);
-  mount([]);
-  const input = screen.getByRole("textbox", { name: "Word" });
-  const form = screen.getByRole("form", { name: "Add" });
-  fireEvent.change(input, { target: { value: "serene" } });
-  fireEvent.submit(form);
-  fireEvent.submit(form);
-  expect(input).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
-  expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/words",
-    expect.objectContaining({ method: "POST", body: '{"word":"serene"}' }),
-  );
-  await act(async () =>
-    pending.resolve(
-      new Response(
-        JSON.stringify({
-          entry: { ...vocabulary, id: "new", word: "serene", day: dayKey() },
-        }),
-        { status: 201 },
+it.each(["serene", "wear off"])(
+  "saves %s from the inline form once and clears the input",
+  async (word) => {
+    const pending = Promise.withResolvers<Response>();
+    vi.mocked(fetch).mockReturnValue(pending.promise);
+    mount([]);
+    const input = screen.getByRole("textbox", { name: "Word" });
+    const form = screen.getByRole("form", { name: "Add" });
+    fireEvent.change(input, { target: { value: word } });
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/words",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ word }),
+      }),
+    );
+    await act(async () =>
+      pending.resolve(
+        new Response(
+          JSON.stringify({
+            entry: { ...vocabulary, id: "new", word, day: dayKey() },
+          }),
+          { status: 201 },
+        ),
       ),
-    ),
-  );
-  expect(screen.getByRole("heading", { name: "serene" })).toBeVisible();
-  expect(input).toHaveValue("");
-  expect(input).toBeEnabled();
-  expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
-});
+    );
+    expect(screen.getByRole("heading", { name: word })).toBeVisible();
+    expect(input).toHaveValue("");
+    expect(input).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  },
+);
 it("keeps a failed word in the inline input for correction", async () => {
   vi.mocked(fetch).mockImplementation(async (_url, options) =>
     options?.method === "POST"

@@ -84,6 +84,20 @@ it("prepares complete dictionary content without writing, then save reuses it", 
     headword: "serene",
   });
 });
+it("prepares and saves a phrase using the hyphenated Cambridge path", async () => {
+  const fetcher = pages("wear off");
+  expect((await PUT(request("PUT", " wear   off "))).status).toBe(204);
+  expect(ports.save).not.toHaveBeenCalled();
+  expect((await POST(request("POST", "wear off"))).status).toBe(201);
+  expect(fetcher.mock.calls.map(([url]) => url.href)).toEqual([
+    "https://dictionary.cambridge.org/us/dictionary/english/wear-off",
+    "https://simple.wiktionary.org/wiki/wear%20off",
+  ]);
+  expect(ports.save).toHaveBeenCalledWith("wear off", {
+    ...dictionaryEntry,
+    headword: "wear off",
+  });
+});
 it("does not expose preparation to anonymous callers", async () => {
   const fetcher = pages("anonymous");
   ports.auth.mockResolvedValue(null);

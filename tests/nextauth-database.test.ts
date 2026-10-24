@@ -43,6 +43,12 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("supabase/migrations/007_thai_meaning.sql", "utf8"),
   );
+  await db.exec(
+    readFileSync("supabase/migrations/008_phrasal_verbs.sql", "utf8"),
+  );
+  await db.exec(
+    readFileSync("supabase/migrations/008_phrasal_verbs.sql", "utf8"),
+  );
 }, 30000);
 afterAll(async () => {
   if (db) await db.close();
@@ -207,6 +213,92 @@ it("refuses unrecognized owners and malformed dictionary payloads", async () => 
     ),
   ).rejects.toThrow("invalid_entry");
   expect((await db.query("select * from public.vocabulary")).rows).toEqual([]);
+});
+
+it("saves phrases with normalized spaces and preserves duplicate and quota rules", async () => {
+  await service();
+  const saved = (await save(alice, "  WEAR   OFF  ")).rows[0];
+  expect(saved.word).toBe("wear off");
+  await expect(save(alice, "wear off")).rejects.toThrow("duplicate_word");
+  expect((await save(alice, "turn down")).rows[0].slot).toBe(2);
+  await expect(save(alice, "look up")).rejects.toThrow("daily_limit");
+  expect((await save(bob, "wear off")).rows[0].user_id).toBe(bob);
+});
+it.each(["turn something/someone down", "turn (sb/sth) down"])(
+  "accepts Cambridge object placeholders in %s",
+  async (headword) => {
+    await service();
+    const saved = await db.query<{ word: string }>(
+      "select * from public.save_vocabulary($1::uuid,$2,$3::jsonb)",
+      [alice, "turn down", JSON.stringify({ ...dictionaryEntry, headword })],
+    );
+    expect(saved.rows[0].word).toBe("turn down");
+  },
+);
+it.each([
+  ["rely upon", "rely on/upon something/someone"],
+  ["rely on", "rely on/upon something/someone"],
+  ["blend into", "blend in/blend into something"],
+  ["blend in", "blend in/blend into something"],
+  ["the icing on the cake", "the icing on the cake"],
+  ["icing on the cake", "the icing on the cake"],
+  ["wear off", "wear-off"],
+  ["wear-off", "wear off"],
+  ["ought", "ought to"],
+  ["wear", "wear something"],
+])("saves %s with Cambridge headword %s", async (word, headword) => {
+  await service();
+  const saved = await db.query<{ word: string }>(
+    "select * from public.save_vocabulary($1::uuid,$2,$3::jsonb)",
+    [alice, word, JSON.stringify({ ...dictionaryEntry, headword })],
+  );
+  expect(saved.rows[0].word).toBe(word);
+});
+it.each([
+  ["rely beyond", "rely on/upon something/someone"],
+  ["blend out", "blend in/blend into something"],
+  ["turn down", "turn something up"],
+  ["wear off", "wear-off something else"],
+  ["blend into", "blend in/fade into something"],
+])(
+  "refuses %s with unrelated Cambridge headword %s",
+  async (word, headword) => {
+    await service();
+    await expect(
+      db.query("select * from public.save_vocabulary($1::uuid,$2,$3::jsonb)", [
+        alice,
+        word,
+        JSON.stringify({ ...dictionaryEntry, headword }),
+      ]),
+    ).rejects.toThrow("invalid_entry");
+    expect((await db.query("select * from public.vocabulary")).rows).toEqual(
+      [],
+    );
+  },
+);
+it.each([
+  "wear\toff",
+  "wear\noff",
+  "wear off\n",
+  "wear/off",
+  "wear 123",
+  "wear --off",
+  "wear_ off",
+  "a".repeat(81),
+])("refuses malformed phrases: %j", async (word) => {
+  await service();
+  await expect(save(alice, word)).rejects.toThrow("invalid_entry");
+  expect((await db.query("select * from public.vocabulary")).rows).toEqual([]);
+});
+it("refuses unrelated dictionary headwords for a phrase", async () => {
+  await service();
+  await expect(
+    db.query("select * from public.save_vocabulary($1::uuid,$2,$3::jsonb)", [
+      alice,
+      "turn down",
+      JSON.stringify({ ...dictionaryEntry, headword: "turn something up" }),
+    ]),
+  ).rejects.toThrow("invalid_entry");
 });
 
 it("updates only the owner's annotation and preserves dictionary, slots and dates", async () => {

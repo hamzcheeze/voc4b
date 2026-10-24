@@ -155,7 +155,7 @@ export default function TodayView() {
                 lang="en"
                 autoComplete="off"
                 spellCheck={false}
-                placeholder="Enter a word"
+                placeholder="Enter a word or phrase"
                 value={word}
                 onChange={(event) => {
                   setWord(event.target.value);

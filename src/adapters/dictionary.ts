@@ -164,7 +164,10 @@ function parseCambridgeHtml(args: {
     }
   > = [];
   $(".pos-header.dpos-h").each((_, header) => {
-    const posNode = $(header).find(".dpos-g").first();
+    const posGroup = $(header).find(".dpos-g").first();
+    const posNode = posGroup.length
+      ? posGroup
+      : $(header).find(".pos.dpos").first();
     if (!posNode.length) return;
     const pos = posNode.text();
     $(header)
@@ -192,7 +195,7 @@ function parseCambridgeHtml(args: {
       return {
         id: String(index),
         pos: definition
-          .closest(".pr.entry-body__el, .idiom-block")
+          .closest(".entry-body__el, .idiom-block, .pv-block")
           .find(".pos.dpos")
           .first()
           .text(),
